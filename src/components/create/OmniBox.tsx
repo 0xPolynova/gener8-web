@@ -329,29 +329,71 @@ export function OmniBox() {
     setPrompt(serializeEditor(editor));
   };
 
-  const useStyleImage = (url: string) => {
-    setMedia((prev) => {
-      if (prev.some((item) => item.uploadedUrl === url)) return prev;
-      return [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          type: "image" as const,
-          localUrl: url,
-          uploadedUrl: url,
-          label: nextLabel("image"),
-          uploading: false,
-        },
-      ];
-    });
-    const editor = editorRef.current;
-    if (editor) {
-      const handle = styleKol?.handle;
-      insertChip(editor, url, url, handle ? `@${handle}` : "Style", handle ? "STYLED" : undefined);
-      setPrompt(serializeEditor(editor));
-      editor.focus();
-    }
+  const useStyleImage = (pick: { url: string; style: string }) => {
+    const kol = styleKol;
+    const apply = (url: string) => {
+      setMedia((prev) => {
+        if (prev.some((item) => item.uploadedUrl === url)) return prev;
+        return [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            type: "image" as const,
+            localUrl: url,
+            uploadedUrl: url,
+            label: nextLabel("image"),
+            uploading: false,
+          },
+        ];
+      });
+      const editor = editorRef.current;
+      if (editor) {
+        const handle = kol?.handle;
+        insertChip(editor, url, url, handle ? `@${handle}` : "Style", handle ? "STYLED" : undefined);
+        setPrompt(serializeEditor(editor));
+        editor.focus();
+      }
+    };
+
+    apply(pick.url);
     setStyleKol(null);
+
+    if (!kol) return;
+    void apiFetch("/api/styles/select", {
+      method: "POST",
+      body: JSON.stringify({
+        kolId: kol.id,
+        handle: kol.handle,
+        style: pick.style,
+        imageUrl: pick.url,
+      }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        if (data.cdn && data.url && data.url !== pick.url) {
+          const editor = editorRef.current;
+          if (editor) {
+            removeChip(editor, pick.url);
+            insertChip(
+              editor,
+              data.url,
+              data.url,
+              `@${kol.handle}`,
+              "STYLED",
+            );
+            setPrompt(serializeEditor(editor));
+          }
+          setMedia((prev) =>
+            prev.map((item) =>
+              item.uploadedUrl === pick.url
+                ? { ...item, localUrl: data.url, uploadedUrl: data.url }
+                : item,
+            ),
+          );
+        }
+      })
+      .catch(() => undefined);
   };
 
   const toggleKol = (handle: string) => {

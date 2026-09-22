@@ -11,7 +11,7 @@ interface StylePickerProps {
   kol: Kol | null;
   session: number;
   onClose: () => void;
-  onPick: (url: string) => void;
+  onPick: (pick: { url: string; style: string }) => void;
 }
 
 export function StylePicker({ kol, session, onClose, onPick }: StylePickerProps) {
@@ -86,7 +86,7 @@ export function StylePicker({ kol, session, onClose, onPick }: StylePickerProps)
               <div className="flex items-center justify-between border-b border-white/6 px-3 py-2">
                 <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-white">Style · {kol.name}</p>
-                  <p className="text-[11px] text-white/40">10 full-length 9:16 looks from this photo</p>
+                  <p className="text-[11px] text-white/40">5 full-length 9:16 looks from this photo</p>
                 </div>
                 <button type="button" onClick={onClose} className="rounded-full p-1.5 text-white/40 hover:text-white">
                   <X className="h-4 w-4" />
@@ -119,12 +119,12 @@ export function StylePicker({ kol, session, onClose, onPick }: StylePickerProps)
               {error && <p className="px-3 pb-2 text-[12px] text-red-300">{error}</p>}
 
               <div className="grid grid-cols-5 gap-1 p-1.5">
-                {(busy ? Array.from({ length: 10 }, () => "") : images).map((url, index) =>
+                {(busy ? Array.from({ length: 5 }, () => "") : images).map((url, index) =>
                   url ? (
                     <button
                       key={url}
                       type="button"
-                      onClick={() => onPick(url)}
+                      onClick={() => onPick({ url, style: style.trim() })}
                       className="relative aspect-[9/16] overflow-hidden rounded-lg"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
