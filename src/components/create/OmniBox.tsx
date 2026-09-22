@@ -474,5 +474,6 @@ export function OmniBox() {
       onToggle={toggleKol}
       onClose={() => setShowKols(false)}
     />
-  </>;
+  </>
+  );
 }
