@@ -79,7 +79,7 @@ function serializeEditor(root: HTMLElement): string {
   return out.replace(/\u00a0/g, " ").replace(/\n+$/g, "").trim();
 }
 
-function makeChip(token: string, imageUrl: string | null, display?: string) {
+function makeChip(token: string, imageUrl: string | null, display?: string, thin?: string) {
   const span = document.createElement("span");
   span.contentEditable = "false";
   span.dataset.token = token;
@@ -96,12 +96,18 @@ function makeChip(token: string, imageUrl: string | null, display?: string) {
   const label = document.createElement("span");
   label.textContent = display ?? token;
   span.appendChild(label);
+  if (thin) {
+    const extra = document.createElement("span");
+    extra.textContent = thin;
+    extra.className = "font-thin tracking-wide text-yellow/80";
+    span.appendChild(extra);
+  }
   return span;
 }
 
-function insertChip(editor: HTMLElement, token: string, imageUrl: string | null, display?: string) {
+function insertChip(editor: HTMLElement, token: string, imageUrl: string | null, display?: string, thin?: string) {
   if (editor.querySelector(tokenSelector(token))) return;
-  const chip = makeChip(token, imageUrl, display);
+  const chip = makeChip(token, imageUrl, display, thin);
   const frag = document.createDocumentFragment();
   frag.appendChild(document.createTextNode(" "));
   frag.appendChild(chip);
@@ -339,7 +345,8 @@ export function OmniBox() {
     });
     const editor = editorRef.current;
     if (editor) {
-      insertChip(editor, url, url, "Style");
+      const handle = styleKol?.handle;
+      insertChip(editor, url, url, handle ? `@${handle}` : "Style", handle ? "STYLED" : undefined);
       setPrompt(serializeEditor(editor));
       editor.focus();
     }
