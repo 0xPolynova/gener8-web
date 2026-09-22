@@ -50,12 +50,98 @@ function remixTemplate(videoLabel: string): string {
   );
 }
 
+function tokenSelector(token: string) {
+  const safe = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(token) : token;
+  return `[data-token="${safe}"]`;
+}
+
+function serializeEditor(root: HTMLElement): string {
+  let out = "";
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += node.textContent ?? "";
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    if (node.dataset.token) {
+      out += node.dataset.token;
+      return;
+    }
+    if (node.tagName === "BR") {
+      out += "\n";
+      return;
+    }
+    node.childNodes.forEach(walk);
+    if ((node.tagName === "DIV" || node.tagName === "P") && !out.endsWith("\n")) out += "\n";
+  };
+  root.childNodes.forEach(walk);
+  return out.replace(/\u00a0/g, " ").replace(/\n+$/g, "").trim();
+}
+
+function makeChip(token: string, imageUrl: string | null) {
+  const span = document.createElement("span");
+  span.contentEditable = "false";
+  span.dataset.token = token;
+  span.className =
+    "mx-0.5 inline-flex items-center gap-1 align-middle rounded-full border border-yellow/30 bg-yellow/10 py-0.5 pl-0.5 pr-1.5 text-[13px] font-medium leading-none text-yellow select-none";
+  if (imageUrl) {
+    const img = document.createElement("img");
+    img.src = imageUrl;
+    img.alt = "";
+    img.draggable = false;
+    img.className = "h-5 w-5 rounded-full object-cover";
+    span.appendChild(img);
+  }
+  const label = document.createElement("span");
+  label.textContent = token;
+  span.appendChild(label);
+  return span;
+}
+
+function insertChip(editor: HTMLElement, token: string, imageUrl: string | null) {
+  if (editor.querySelector(tokenSelector(token))) return;
+  const chip = makeChip(token, imageUrl);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(document.createTextNode(" "));
+  frag.appendChild(chip);
+  frag.appendChild(document.createTextNode(" "));
+
+  const sel = window.getSelection();
+  const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+  if (range && editor.contains(range.startContainer)) {
+    range.deleteContents();
+    range.insertNode(frag);
+    const after = document.createRange();
+    after.setStartAfter(chip);
+    after.collapse(true);
+    sel?.removeAllRanges();
+    sel?.addRange(after);
+  } else {
+    editor.appendChild(frag);
+  }
+}
+
+function removeChip(editor: HTMLElement, token: string) {
+  editor.querySelectorAll(tokenSelector(token)).forEach((el) => el.remove());
+}
+
+function fillEditor(editor: HTMLElement, text: string, images: Record<string, string | null>) {
+  editor.replaceChildren();
+  for (const part of text.split(/(@[A-Za-z0-9_]+)/g)) {
+    if (!part) continue;
+    if (part.startsWith("@")) editor.appendChild(makeChip(part, images[part] ?? null));
+    else editor.appendChild(document.createTextNode(part));
+  }
+}
+
 export function OmniBox() {
   const { session, eligibility } = useAppState();
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const selectedKolsRef = useRef<string[]>([]);
+  const mediaRef = useRef<OmniMedia[]>([]);
 
   const [prompt, setPrompt] = useState("");
   const [media, setMedia] = useState<OmniMedia[]>([]);
@@ -67,6 +153,28 @@ export function OmniBox() {
   const [submitting, setSubmitting] = useState(false);
 
   const remaining = eligibility?.remainingToday ?? eligibility?.dailyLimit ?? 0;
+  selectedKolsRef.current = selectedKols;
+  mediaRef.current = media;
+
+  const syncEditor = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const next = serializeEditor(editor);
+    setPrompt(next);
+    const tokens = new Set(
+      [...editor.querySelectorAll<HTMLElement>("[data-token]")].map((el) => el.dataset.token),
+    );
+    setSelectedKols((prev) => {
+      const filtered = prev.filter((h) => tokens.has(`@${h}`));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+    setMedia((prev) => {
+      const filtered = prev.filter((m) => tokens.has(`@${m.label}`));
+      if (filtered.length === prev.length) return prev;
+      prev.filter((m) => !tokens.has(`@${m.label}`)).forEach((m) => URL.revokeObjectURL(m.localUrl));
+      return filtered;
+    });
+  }, []);
 
   /* Close settings on outside click */
   useEffect(() => {
@@ -101,14 +209,24 @@ export function OmniBox() {
       };
       setRemix(remixData);
       setSettings((s) => ({ ...s, duration: detail.duration }));
-      setPrompt(remixTemplate(label));
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.selectionStart = textareaRef.current.value.length;
-          textareaRef.current.selectionEnd = textareaRef.current.value.length;
+      const editor = editorRef.current;
+      if (editor) {
+        const images: Record<string, string | null> = {
+          [`@${label}`]: detail.thumbnailUrl,
+        };
+        for (const handle of selectedKolsRef.current) {
+          images[`@${handle}`] = KOLS.find((k) => k.handle === handle)?.avatar ?? null;
         }
-      }, 80);
+        for (const item of mediaRef.current) images[`@${item.label}`] = item.localUrl;
+        const extras = [
+          ...selectedKolsRef.current.map((h) => `@${h}`),
+          ...mediaRef.current.map((m) => `@${m.label}`),
+        ];
+        const text = [remixTemplate(label), ...extras].filter(Boolean).join(" ");
+        fillEditor(editor, text, images);
+        setPrompt(serializeEditor(editor));
+        editor.focus();
+      }
     };
     window.addEventListener("omni:remix", handler);
     return () => window.removeEventListener("omni:remix", handler);
@@ -116,37 +234,41 @@ export function OmniBox() {
 
   const clearRemix = () => {
     setRemix(null);
-    setPrompt("");
+    const editor = editorRef.current;
+    if (!editor) {
+      setPrompt("");
+      return;
+    }
+    const images: Record<string, string | null> = {};
+    for (const handle of selectedKolsRef.current) {
+      images[`@${handle}`] = KOLS.find((k) => k.handle === handle)?.avatar ?? null;
+    }
+    for (const item of mediaRef.current) images[`@${item.label}`] = item.localUrl;
+    const text = [
+      ...selectedKolsRef.current.map((h) => `@${h}`),
+      ...mediaRef.current.map((m) => `@${m.label}`),
+    ].join(" ");
+    fillEditor(editor, text, images);
+    setPrompt(serializeEditor(editor));
   };
 
   const toggleKol = (handle: string) => {
-    const ref = `@${handle}`;
-    setSelectedKols((prev) => {
-      const next = prev.includes(handle)
-        ? prev.filter((h) => h !== handle)
-        : [...prev, handle];
-
-      // Keep prompt @mentions in sync
-      if (prev.includes(handle)) {
-        // remove it from prompt
-        setPrompt((p) =>
-          p
-            .replace(new RegExp(`\\s*${ref}\\b`, "g"), "")
-            .replace(new RegExp(`\\b${ref}\\s*`, "g"), "")
-            .trim(),
-        );
-      } else {
-        // append to prompt
-        setPrompt((p) => (p ? `${p} ${ref}` : ref));
-      }
-      return next;
-    });
+    const editor = editorRef.current;
+    const token = `@${handle}`;
+    const kol = KOLS.find((k) => k.handle === handle);
+    if (selectedKolsRef.current.includes(handle)) {
+      setSelectedKols((prev) => prev.filter((h) => h !== handle));
+      if (editor) removeChip(editor, token);
+    } else {
+      setSelectedKols((prev) => (prev.includes(handle) ? prev : [...prev, handle]));
+      if (editor) insertChip(editor, token, kol?.avatar ?? null);
+    }
+    if (editor) setPrompt(serializeEditor(editor));
   };
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
       if (!files?.length) return;
-      const newItems: OmniMedia[] = [];
 
       for (const file of Array.from(files)) {
         const isVideo = file.type.startsWith("video/");
@@ -162,8 +284,8 @@ export function OmniBox() {
           label,
           uploading: true,
         };
-        newItems.push(item);
         setMedia((prev) => [...prev, item]);
+        if (editorRef.current) insertChip(editorRef.current, `@${label}`, item.localUrl);
 
         const form = new FormData();
         form.append("file", file);
@@ -179,26 +301,25 @@ export function OmniBox() {
         } catch {
           toast(`Couldn't upload ${file.name}`, "error");
           setMedia((prev) => prev.filter((m) => m.id !== item.id));
+          if (editorRef.current) removeChip(editorRef.current, `@${item.label}`);
           URL.revokeObjectURL(item.localUrl);
         }
       }
 
-      /* Append @Label references to the prompt */
-      if (newItems.length > 0) {
-        const refs = newItems.map((m) => `@${m.label}`).join(" ");
-        setPrompt((p) => (p ? `${p} ${refs}` : refs));
-        setTimeout(() => textareaRef.current?.focus(), 50);
-      }
+      if (editorRef.current) setPrompt(serializeEditor(editorRef.current));
+      setTimeout(() => editorRef.current?.focus(), 50);
     },
     [toast],
   );
 
   const removeMedia = (id: string) => {
-    setMedia((prev) => {
-      const item = prev.find((m) => m.id === id);
-      if (item) URL.revokeObjectURL(item.localUrl);
-      return prev.filter((m) => m.id !== id);
-    });
+    const item = mediaRef.current.find((m) => m.id === id);
+    if (item) {
+      URL.revokeObjectURL(item.localUrl);
+      if (editorRef.current) removeChip(editorRef.current, `@${item.label}`);
+    }
+    setMedia((prev) => prev.filter((m) => m.id !== id));
+    if (editorRef.current) setPrompt(serializeEditor(editorRef.current));
   };
 
   const handleSubmit = async () => {
@@ -239,6 +360,7 @@ export function OmniBox() {
       if (!res.ok) { toast(data.error ?? "Generation failed.", "error"); return; }
 
       toast("Generating… this takes ~60s. Check My Creations.", "success");
+      if (editorRef.current) editorRef.current.replaceChildren();
       setPrompt("");
       setMedia([]);
       setRemix(null);
@@ -355,17 +477,30 @@ export function OmniBox() {
           </div>
         )}
 
-        {/* Prompt textarea */}
-        <div className="px-3 pb-1">
-          <textarea
-            ref={textareaRef}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmit(); }}
-            placeholder={session ? "Describe what you want to generate… (⌘↵ to send)" : "Connect your wallet to start creating"}
-            disabled={!session || submitting}
-            rows={2}
-            className="w-full resize-none border-0 bg-transparent text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:ring-0 disabled:opacity-40"
+        {/* Prompt — chips render inline; the stored prompt is still @Handle / @Image1 */}
+        <div className="relative px-3 pb-1">
+          {!prompt && (
+            <p className="pointer-events-none absolute left-3 top-0 text-[14px] text-white/30">
+              {session ? "Describe what you want to generate… (⌘↵ to send)" : "Connect your wallet to start creating"}
+            </p>
+          )}
+          <div
+            ref={editorRef}
+            contentEditable={!!session && !submitting}
+            suppressContentEditableWarning
+            role="textbox"
+            aria-multiline="true"
+            onInput={syncEditor}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+            className={cn(
+              "min-h-[52px] w-full whitespace-pre-wrap break-words text-[14px] leading-6 text-white focus:outline-none",
+              (!session || submitting) && "opacity-40",
+            )}
           />
         </div>
 
