@@ -104,6 +104,7 @@ export function DiscoverFeed() {
       new CustomEvent("omni:remix", {
         detail: {
           videoUrl: video.videoUrl,
+          thumbnailUrl: video.thumbnailUrl,
           duration: video.duration,
           title: video.title || promptPreview(video.prompt, 60),
           id: video.id,

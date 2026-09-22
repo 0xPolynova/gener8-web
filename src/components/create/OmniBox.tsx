@@ -23,9 +23,11 @@ interface OmniSettings {
 
 interface RemixVideo {
   url: string;
+  thumbnailUrl: string | null;
   duration: number;
   title: string;
   id: string;
+  label: string;
 }
 
 const RATIOS: OmniSettings["ratio"][] = ["16:9", "4:3", "1:1", "3:4", "9:16"];
@@ -34,7 +36,17 @@ let imgSeq = 0;
 let vidSeq = 0;
 
 function nextLabel(type: "image" | "video") {
-  return type === "image" ? `Image ${++imgSeq}` : `Video ${++vidSeq}`;
+  return type === "image" ? `Image${++imgSeq}` : `Video${++vidSeq}`;
+}
+
+function remixTemplate(videoLabel: string): string {
+  return (
+    `@${videoLabel} replace the characters in this video with these characters. ` +
+    `This video must be exactly like @${videoLabel} — do not change anything but the characters, ` +
+    `keeping their lipsync and motion. The framing, cutaways, camera angles, and video composition ` +
+    `must stay exactly the same. Never swap character placement; all characters stay in the same ` +
+    `position throughout the entire video.`
+  );
 }
 
 export function OmniBox() {
@@ -53,7 +65,7 @@ export function OmniBox() {
 
   const remaining = eligibility?.remainingToday ?? eligibility?.dailyLimit ?? 0;
 
-  /* Close settings panel on outside click */
+  /* Close settings on outside click */
   useEffect(() => {
     if (!showSettings) return;
     const handler = (e: MouseEvent) => {
@@ -65,24 +77,44 @@ export function OmniBox() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showSettings]);
 
-  /* Listen for remix events dispatched from VideoCard */
+  /* Listen for remix events */
   useEffect(() => {
     const handler = (e: Event) => {
-      const { videoUrl, duration, title, id } = (
-        e as CustomEvent<RemixVideo & { videoUrl: string }>
-      ).detail;
-      setRemix({ url: videoUrl, duration, title, id });
-      setSettings((s) => ({ ...s, duration }));
+      const detail = (e as CustomEvent).detail as {
+        videoUrl: string;
+        thumbnailUrl: string | null;
+        duration: number;
+        title: string;
+        id: string;
+      };
+      const label = nextLabel("video");
+      const remixData: RemixVideo = {
+        url: detail.videoUrl,
+        thumbnailUrl: detail.thumbnailUrl,
+        duration: detail.duration,
+        title: detail.title,
+        id: detail.id,
+        label,
+      };
+      setRemix(remixData);
+      setSettings((s) => ({ ...s, duration: detail.duration }));
+      setPrompt(remixTemplate(label));
       setTimeout(() => {
-        textareaRef.current?.focus();
-        containerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.selectionStart = textareaRef.current.value.length;
+          textareaRef.current.selectionEnd = textareaRef.current.value.length;
+        }
       }, 80);
     };
     window.addEventListener("omni:remix", handler);
     return () => window.removeEventListener("omni:remix", handler);
   }, []);
 
-  const clearRemix = () => setRemix(null);
+  const clearRemix = () => {
+    setRemix(null);
+    setPrompt("");
+  };
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
@@ -94,12 +126,13 @@ export function OmniBox() {
         const isImage = file.type.startsWith("image/");
         if (!isVideo && !isImage) continue;
 
+        const label = nextLabel(isVideo ? "video" : "image");
         const item: OmniMedia = {
           id: crypto.randomUUID(),
           type: isVideo ? "video" : "image",
           localUrl: URL.createObjectURL(file),
           uploadedUrl: null,
-          label: nextLabel(isVideo ? "video" : "image"),
+          label,
           uploading: true,
         };
         newItems.push(item);
@@ -123,9 +156,10 @@ export function OmniBox() {
         }
       }
 
-      const labels = newItems.map((m) => m.label).join(", ");
-      if (labels) {
-        setPrompt((p) => (p ? `${p} ${labels}` : labels));
+      /* Append @Label references to the prompt */
+      if (newItems.length > 0) {
+        const refs = newItems.map((m) => `@${m.label}`).join(" ");
+        setPrompt((p) => (p ? `${p} ${refs}` : refs));
         setTimeout(() => textareaRef.current?.focus(), 50);
       }
     },
@@ -202,6 +236,7 @@ export function OmniBox() {
       <div className="pointer-events-none absolute -inset-px rounded-2xl border border-white/8" />
 
       <div className="omni-box relative rounded-2xl bg-ink/92 backdrop-blur-xl overflow-hidden shadow-2xl">
+
         {/* Settings panel */}
         {showSettings && (
           <div className="border-b border-white/6 px-4 py-3 space-y-3 animate-rise">
@@ -248,9 +283,7 @@ export function OmniBox() {
               onClick={() => setShowSettings((s) => !s)}
               className={cn(
                 "flex items-center gap-1 rounded-lg border px-2 py-1 text-[12px] font-medium transition-colors",
-                showSettings
-                  ? "border-yellow/40 text-yellow"
-                  : "border-white/10 text-white/60 hover:text-white",
+                showSettings ? "border-yellow/40 text-yellow" : "border-white/10 text-white/60 hover:text-white",
               )}
             >
               {settings.ratio} <span className="text-white/20">|</span> {settings.duration}s
@@ -259,20 +292,39 @@ export function OmniBox() {
           </div>
         </div>
 
-        {/* Remix chip */}
+        {/* Remix card — thumbnail preview */}
         {remix && (
-          <div className="px-3 pb-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow/30 bg-yellow/10 px-2.5 py-0.5 text-[12px] font-medium text-yellow">
-              <Shuffle className="h-2.5 w-2.5" />
-              Remixing: {remix.title}
-              <button onClick={clearRemix} className="opacity-60 hover:opacity-100 ml-0.5">
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </span>
+          <div className="mx-3 mb-2 flex items-center gap-2.5 rounded-xl border border-yellow/20 bg-yellow/5 p-2">
+            {/* Thumbnail */}
+            <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-ink">
+              {remix.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={remix.thumbnailUrl} alt={remix.title} className="h-full w-full object-cover" />
+              ) : (
+                <video src={remix.url} className="h-full w-full object-cover" muted playsInline />
+              )}
+              {/* Remix badge */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <Shuffle className="h-3.5 w-3.5 text-yellow" />
+              </div>
+            </div>
+            {/* Info */}
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold text-yellow/80 uppercase tracking-wide">Remixing · @{remix.label}</p>
+              <p className="truncate text-[13px] font-medium text-white leading-snug mt-0.5">{remix.title}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">{remix.duration}s · duration locked</p>
+            </div>
+            {/* Dismiss */}
+            <button
+              onClick={clearRemix}
+              className="flex-shrink-0 rounded-full p-1 text-white/40 hover:text-white transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         )}
 
-        {/* Media chips */}
+        {/* Media chips row (inline @Label tags) */}
         {media.length > 0 && (
           <div className="px-3 pb-1 flex flex-wrap gap-1.5">
             {media.map((item) => (
@@ -288,8 +340,18 @@ export function OmniBox() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.localUrl} alt={item.label} className="h-3.5 w-3.5 rounded object-cover" />
                 )}
-                {item.uploading ? <span className="animate-pulse">{item.label}…</span> : item.label}
-                <button onClick={() => removeMedia(item.id)} className="opacity-60 hover:opacity-100">
+                <span
+                  className="cursor-pointer hover:underline"
+                  title="Click to insert @label into prompt"
+                  onClick={() => {
+                    const ref = `@${item.label}`;
+                    setPrompt((p) => p ? `${p} ${ref}` : ref);
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  {item.uploading ? <span className="animate-pulse">{item.label}…</span> : `@${item.label}`}
+                </span>
+                <button onClick={() => removeMedia(item.id)} className="opacity-60 hover:opacity-100 ml-0.5">
                   <X className="h-2.5 w-2.5" />
                 </button>
               </span>
@@ -297,7 +359,7 @@ export function OmniBox() {
           </div>
         )}
 
-        {/* Prompt */}
+        {/* Prompt textarea */}
         <div className="px-3 pb-1">
           <textarea
             ref={textareaRef}
@@ -311,21 +373,31 @@ export function OmniBox() {
           />
         </div>
 
-        {/* Bottom bar */}
+        {/* Bottom bar — thumbnails + controls */}
         <div className="flex items-center gap-2 border-t border-white/5 px-3 py-2">
           <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0">
             {media.map((item) => (
-              <div key={item.id} className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
+              /* Thumbnail square with X overlay */
+              <div key={item.id} className="group/thumb relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
                 {item.type === "video" ? (
                   <video src={item.localUrl} className="h-full w-full object-cover" muted />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.localUrl} alt={item.label} className="h-full w-full object-cover" />
                 )}
-                {item.uploading && (
+                {item.uploading ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-ink/70">
                     <span className="h-2.5 w-2.5 rounded-full border-2 border-yellow border-t-transparent animate-spin" />
                   </div>
+                ) : (
+                  /* X button — always visible on mobile, hover on desktop */
+                  <button
+                    onClick={() => removeMedia(item.id)}
+                    className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                    aria-label={`Remove ${item.label}`}
+                  >
+                    <X className="h-3 w-3 text-white" />
+                  </button>
                 )}
               </div>
             ))}
