@@ -303,14 +303,16 @@ export function OmniBox() {
               ) : (
                 <video src={remix.url} className="h-full w-full object-cover" muted playsInline />
               )}
-              {/* Remix badge */}
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <Shuffle className="h-3.5 w-3.5 text-yellow" />
               </div>
             </div>
             {/* Info */}
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-yellow/80 uppercase tracking-wide">Remixing · @{remix.label}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[11px] font-semibold text-yellow/80 uppercase tracking-wide">Remixing</p>
+                <span className="rounded px-1 py-0.5 text-[11px] font-mono font-medium text-yellow bg-yellow/15">@{remix.label}</span>
+              </div>
               <p className="truncate text-[13px] font-medium text-white leading-snug mt-0.5">{remix.title}</p>
               <p className="text-[11px] text-white/40 mt-0.5">{remix.duration}s · duration locked</p>
             </div>
@@ -321,41 +323,6 @@ export function OmniBox() {
             >
               <X className="h-3.5 w-3.5" />
             </button>
-          </div>
-        )}
-
-        {/* Media chips row (inline @Label tags) */}
-        {media.length > 0 && (
-          <div className="px-3 pb-1 flex flex-wrap gap-1.5">
-            {media.map((item) => (
-              <span key={item.id} className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium",
-                item.type === "video"
-                  ? "bg-amber-500/15 text-amber-300 border border-amber-500/25"
-                  : "bg-violet-500/15 text-violet-300 border border-violet-500/25",
-              )}>
-                {item.type === "video" ? (
-                  <video src={item.localUrl} className="h-3.5 w-5 rounded object-cover" muted />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.localUrl} alt={item.label} className="h-3.5 w-3.5 rounded object-cover" />
-                )}
-                <span
-                  className="cursor-pointer hover:underline"
-                  title="Click to insert @label into prompt"
-                  onClick={() => {
-                    const ref = `@${item.label}`;
-                    setPrompt((p) => p ? `${p} ${ref}` : ref);
-                    textareaRef.current?.focus();
-                  }}
-                >
-                  {item.uploading ? <span className="animate-pulse">{item.label}…</span> : `@${item.label}`}
-                </span>
-                <button onClick={() => removeMedia(item.id)} className="opacity-60 hover:opacity-100 ml-0.5">
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </span>
-            ))}
           </div>
         )}
 
