@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
@@ -49,47 +49,77 @@ interface KolPickerProps {
 }
 
 function StyleButton({ onPick }: { onPick: (mode: "new" | "community") => void }) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ bottom: 0, left: 0 });
+
+  const place = () => {
+    const rect = anchorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPos({ bottom: window.innerHeight - rect.top, left: rect.left });
+  };
+
+  const closeIfLeft = (event: { relatedTarget: EventTarget | null }) => {
+    const next = event.relatedTarget as Node | null;
+    if (anchorRef.current?.contains(next) || menuRef.current?.contains(next)) return;
+    setOpen(false);
+  };
+
   return (
     <div
+      ref={anchorRef}
       className="absolute left-1.5 top-1.5 z-10"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => {
+        place();
+        setOpen(true);
+      }}
+      onMouseLeave={closeIfLeft}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="absolute bottom-full left-0 flex flex-col gap-1 pb-1"
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 420, damping: 28 }}
-          >
-            <button
-              type="button"
-              onClick={() => onPick("new")}
-              className="whitespace-nowrap rounded-md bg-[#ffe9a3] px-1.5 py-0.5 text-[11px] font-semibold text-ink"
-            >
-              New
-            </button>
-            <button
-              type="button"
-              onClick={() => onPick("community")}
-              className="whitespace-nowrap rounded-md bg-[#f3d36a] px-1.5 py-0.5 text-[11px] font-semibold text-ink"
-            >
-              Community styles
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <button
         type="button"
         className="rounded-md bg-yellow px-1.5 py-0.5 text-[11px] font-semibold text-ink"
       >
         Style
       </button>
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                ref={menuRef}
+                id="style-hover-menu"
+                className="fixed z-[28] flex flex-col gap-1 pb-1"
+                style={{ bottom: pos.bottom, left: pos.left }}
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                onMouseLeave={closeIfLeft}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => onPick("new")}
+                  className="whitespace-nowrap rounded-md bg-[#ffe9a3] px-1.5 py-0.5 text-left text-[11px] font-semibold text-ink"
+                >
+                  New
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPick("community")}
+                  className="whitespace-nowrap rounded-md bg-[#f3d36a] px-1.5 py-0.5 text-left text-[11px] font-semibold text-ink"
+                >
+                  Community styles
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }

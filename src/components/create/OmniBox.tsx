@@ -259,6 +259,7 @@ export function OmniBox() {
       if (kolButtonRef.current?.contains(target)) return;
       if (document.getElementById("kol-picker-panel")?.contains(target)) return;
       if (document.getElementById("style-picker-panel")?.contains(target)) return;
+      if (document.getElementById("style-hover-menu")?.contains(target)) return;
       setShowKols(false);
     };
     document.addEventListener("mousedown", onDown);
