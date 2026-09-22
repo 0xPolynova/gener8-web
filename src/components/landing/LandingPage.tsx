@@ -2,30 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Clapperboard,
-  Images,
-  Music2,
-  Repeat,
-  Sparkles,
-  Users,
-  Wand2,
-  Zap,
-} from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { WalletButton } from "@/components/wallet/WalletButton";
 import { apiFetch } from "@/lib/api";
 import type { VideoWithCreator } from "@/types";
 
 const TOOLS = [
-  { icon: Wand2, title: "Prompt", body: "Write the shot. Wan makes the clip." },
-  { icon: Users, title: "KOLs", body: "Keep the face. Change the clothes." },
-  { icon: Repeat, title: "Remix", body: "New characters. Same cut." },
-  { icon: Clapperboard, title: "Omni", body: "Text, photos, and video in one box." },
-  { icon: Sparkles, title: "Length", body: "15 seconds or 30." },
-  { icon: Images, title: "Filters", body: "Trending, viral, tokens, music." },
-  { icon: Music2, title: "Music", body: "Clips built on a track." },
-  { icon: Zap, title: "Access", body: "Hold GENER8. Then create." },
+  { title: "Prompt", body: "Write the shot. Wan makes the clip." },
+  { title: "KOLs", body: "Keep the face. Change the clothes." },
+  { title: "Remix", body: "New characters. Same cut." },
+  { title: "Omni", body: "Text, photos, and video in one box." },
+  { title: "Length", body: "15 seconds or 30." },
+  { title: "Filters", body: "Trending, viral, tokens, music." },
+  { title: "Music", body: "Clips built on a track." },
+  { title: "Access", body: "Hold GENER8. Then create." },
 ];
 
 const STORIES = [
@@ -71,37 +61,49 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-[980px] px-6 pb-16 pt-24 text-center md:pb-20 md:pt-36">
-        <h1 className="text-[64px] font-semibold leading-[0.92] tracking-[-0.04em] md:text-[104px]">
-          Make the clip.
-        </h1>
-        <p className="mx-auto mt-8 max-w-[520px] text-[20px] font-light leading-relaxed text-white/55">
-          Prompt it. Remix it. Put it on the feed.
-        </p>
-        <Link
-          href="/discover"
-          className="mt-10 inline-flex h-14 items-center rounded-2xl bg-yellow px-8 text-[16px] font-bold text-ink"
-        >
-          Open studio
-        </Link>
-        <p className="mt-5 text-[14px] font-light text-white/35">Hold GENER8 to create</p>
-      </section>
-
-      <section className="overflow-hidden py-4">
-        <div className="marquee-track flex w-max gap-4 px-4">
-          {reel.map((video, index) => (
-            <div
-              key={`${video.id}-${index}`}
-              className="h-[320px] w-[200px] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-surface"
+      <section className="relative overflow-hidden pt-16 md:pt-24">
+        <div className="pointer-events-none absolute left-1/2 top-10 h-[480px] w-[860px] -translate-x-1/2 rounded-full bg-yellow/12 blur-[140px]" />
+        <div className="relative mx-auto max-w-[1100px] px-6 text-center">
+          <p className="text-[13px] font-semibold tracking-[0.28em] text-yellow">GENER8</p>
+          <h1 className="mt-5 text-[68px] font-semibold leading-[0.84] tracking-[-0.055em] md:text-[128px]">
+            Clips
+            <br />
+            that hold.
+          </h1>
+          <p className="mx-auto mt-7 max-w-[420px] text-[18px] font-light leading-none text-white/50">
+            Prompt. Remix. Publish.
+          </p>
+          <div className="mt-9 flex items-center justify-center gap-3">
+            <Link
+              href="/discover"
+              className="inline-flex h-14 items-center rounded-2xl bg-yellow px-8 text-[16px] font-bold text-ink"
             >
-              {video.thumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={video.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full items-end p-4 text-[13px] font-bold text-white/40">Clip</div>
-              )}
-            </div>
-          ))}
+              Open studio
+            </Link>
+            <Link
+              href="/gener8"
+              className="inline-flex h-14 items-center rounded-2xl border border-white/15 px-8 text-[16px] font-semibold text-white"
+            >
+              $GENER8
+            </Link>
+          </div>
+        </div>
+        <div className="relative mt-16 overflow-hidden pb-6 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+          <div className="marquee-track flex w-max gap-4 px-4">
+            {reel.map((video, index) => (
+              <div
+                key={`${video.id}-${index}`}
+                className="h-[360px] w-[220px] shrink-0 overflow-hidden rounded-[22px] border border-white/10 bg-surface shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+              >
+                {video.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={video.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full bg-gradient-to-b from-white/10 to-transparent" />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -134,7 +136,7 @@ export function LandingPage() {
             <article key={String(kicker)} className="flex min-h-[420px] flex-col rounded-3xl border border-white/8 bg-surface p-8 md:p-10">
               <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-yellow">{kicker as string}</p>
               <h3 className="mt-6 text-[36px] font-semibold leading-none tracking-tight">{title as string}</h3>
-              <ul className="mt-8 space-y-3 text-[17px] font-light text-white/55">
+              <ul className="mt-8 space-y-1 text-[17px] font-light leading-none text-white/55">
                 {(lines as string[]).map((line) => (
                   <li key={line}>{line}</li>
                 ))}
@@ -152,10 +154,9 @@ export function LandingPage() {
         <p className="mt-4 text-[18px] font-light text-white/45">Short tools. Clear jobs.</p>
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {TOOLS.map((tool) => (
-            <article key={tool.title} className="min-h-[220px] rounded-3xl border border-white/8 bg-elevated p-7">
-              <tool.icon className="h-6 w-6 text-yellow" />
-              <h3 className="mt-8 text-[28px] font-semibold tracking-tight">{tool.title}</h3>
-              <p className="mt-3 text-[16px] font-light leading-relaxed text-white/45">{tool.body}</p>
+            <article key={tool.title} className="min-h-[180px] rounded-3xl border border-white/8 bg-elevated p-7">
+              <h3 className="text-[32px] font-semibold leading-none tracking-tight">{tool.title}</h3>
+              <p className="mt-3 text-[16px] font-light leading-none text-white/45">{tool.body}</p>
             </article>
           ))}
         </div>
@@ -183,7 +184,7 @@ export function LandingPage() {
             <article key={story.tag} className="min-h-[280px] rounded-3xl border border-white/8 bg-surface p-8">
               <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-yellow">{story.tag}</p>
               <p className="mt-8 text-[48px] font-semibold leading-none tracking-tight">{story.stat}</p>
-              <p className="mt-4 text-[18px] font-light text-white/50">{story.line}</p>
+              <p className="mt-6 text-[18px] font-light leading-none text-white/50">{story.line}</p>
             </article>
           ))}
         </div>
@@ -199,8 +200,8 @@ export function LandingPage() {
             ["Feed", "15s and 30s are their own buttons."],
           ].map(([title, body]) => (
             <article key={title} className="min-h-[220px] rounded-3xl border border-white/8 bg-elevated p-8">
-              <h3 className="text-[28px] font-semibold leading-tight">{title}</h3>
-              <p className="mt-4 text-[17px] font-light text-white/45">{body}</p>
+              <h3 className="text-[32px] font-semibold leading-none">{title}</h3>
+              <p className="mt-3 text-[16px] font-light leading-none text-white/45">{body}</p>
             </article>
           ))}
         </div>
@@ -214,8 +215,8 @@ export function LandingPage() {
           ["Time", "15s or 30s."],
         ].map(([title, body]) => (
           <article key={title} className="min-h-[180px] rounded-3xl border border-white/8 p-7">
-            <h3 className="text-[24px] font-semibold">{title}</h3>
-            <p className="mt-3 text-[16px] font-light text-white/45">{body}</p>
+            <h3 className="text-[26px] font-semibold leading-none">{title}</h3>
+            <p className="mt-3 text-[16px] font-light leading-none text-white/45">{body}</p>
           </article>
         ))}
       </section>
