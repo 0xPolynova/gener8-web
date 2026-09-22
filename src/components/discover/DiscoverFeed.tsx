@@ -56,6 +56,8 @@ const FILTERS: { id: DiscoverFilter; label: string }[] = [
   { id: "memecoins", label: "memecoins" },
   { id: "pnl", label: "P&L" },
   { id: "music", label: "music" },
+  { id: "15s", label: "15s" },
+  { id: "30s", label: "30s" },
 ];
 
 export function DiscoverFeed() {
