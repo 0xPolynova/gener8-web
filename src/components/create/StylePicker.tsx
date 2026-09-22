@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
@@ -9,15 +9,25 @@ import type { Kol } from "./KolPicker";
 
 interface StylePickerProps {
   kol: Kol | null;
+  session: number;
   onClose: () => void;
   onPick: (url: string) => void;
 }
 
-export function StylePicker({ kol, onClose, onPick }: StylePickerProps) {
+export function StylePicker({ kol, session, onClose, onPick }: StylePickerProps) {
   const [style, setStyle] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestRef = useRef(0);
+
+  useEffect(() => {
+    requestRef.current += 1;
+    setStyle("");
+    setImages([]);
+    setBusy(false);
+    setError(null);
+  }, [kol?.id, session]);
 
   if (typeof document === "undefined") return null;
 
@@ -28,6 +38,7 @@ export function StylePicker({ kol, onClose, onPick }: StylePickerProps) {
       setError("Describe the clothing style first.");
       return;
     }
+    const requestId = ++requestRef.current;
     setBusy(true);
     setError(null);
     setImages([]);
@@ -37,14 +48,16 @@ export function StylePicker({ kol, onClose, onPick }: StylePickerProps) {
         body: JSON.stringify({ imageUrl: kol.avatar, style: phrase }),
       });
       const data = await res.json();
+      if (requestRef.current !== requestId) return;
       if (!res.ok) throw new Error(data.error ?? "Couldn’t generate styles.");
       const urls = (data.images as { url: string }[] | undefined)?.map((item) => item.url) ?? [];
       if (!urls.length) throw new Error("No images came back.");
       setImages(urls);
     } catch (err) {
+      if (requestRef.current !== requestId) return;
       setError(err instanceof Error ? err.message : "Couldn’t generate styles.");
     } finally {
-      setBusy(false);
+      if (requestRef.current === requestId) setBusy(false);
     }
   };
 

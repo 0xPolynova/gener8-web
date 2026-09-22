@@ -175,6 +175,7 @@ export function OmniBox() {
   const [showSettings, setShowSettings] = useState(false);
   const [showKols, setShowKols] = useState(false);
   const [styleKol, setStyleKol] = useState<Kol | null>(null);
+  const [styleSession, setStyleSession] = useState(0);
   const [selectedKols, setSelectedKols] = useState<string[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -830,11 +831,15 @@ export function OmniBox() {
       open={showKols}
       selected={selectedKols}
       onToggle={toggleKol}
-      onStyle={(kol) => setStyleKol(kol)}
+      onStyle={(kol) => {
+        setStyleSession((n) => n + 1);
+        setStyleKol(kol);
+      }}
       onClose={() => setShowKols(false)}
     />
     <StylePicker
       kol={styleKol}
+      session={styleSession}
       onClose={() => setStyleKol(null)}
       onPick={useStyleImage}
     />
