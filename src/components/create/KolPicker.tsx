@@ -78,7 +78,7 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
 
             <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-surface/90 backdrop-blur-2xl shadow-[0_32px_80px_rgba(0,0,0,0.7)]">
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
+              <div className="flex items-center justify-between border-b border-white/6 px-3 py-2">
                 <div>
                   <p className="text-[13px] font-semibold text-white">KOLs</p>
                   <p className="text-[11px] text-white/40">Select to add @mention to your prompt</p>
@@ -92,44 +92,41 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
               </div>
 
               {/* Grid 4×5 */}
-              <div className="grid grid-cols-5 gap-1 p-1.5">
+              <div className="grid grid-cols-5 gap-px p-px">
                 {KOLS.map((kol) => {
                   const isSelected = selected.includes(kol.handle);
                   return (
                     <motion.button
                       key={kol.id}
                       onClick={() => onToggle(kol.handle)}
-                      whileTap={{ scale: 0.93 }}
+                      whileTap={{ scale: 0.97 }}
                       className={cn(
-                        "group relative flex flex-col items-center gap-1 rounded-xl p-1.5 transition-all duration-150",
-                        isSelected
-                          ? "bg-yellow/12 ring-1 ring-yellow/40"
-                          : "hover:bg-white/6",
+                        "group relative w-full aspect-square overflow-hidden transition-all duration-150",
+                        isSelected ? "ring-2 ring-inset ring-yellow/60" : "",
                       )}
                     >
-                      {/* Glow on selected */}
+                      {/* Avatar — fills entire cell */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={kol.avatar}
+                        alt={kol.name}
+                        className="h-full w-full object-cover"
+                      />
+
+                      {/* Selected overlay */}
                       {isSelected && (
-                        <div className="pointer-events-none absolute inset-0 rounded-xl bg-yellow/8 blur-sm" />
+                        <div className="absolute inset-0 flex items-start justify-end p-1.5 bg-yellow/10">
+                          <Check className="h-4 w-4 text-yellow drop-shadow" strokeWidth={2.5} />
+                        </div>
                       )}
-                      {/* Avatar — fills the column width */}
-                      <div className="relative w-full aspect-square overflow-hidden rounded-xl border border-white/10">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={kol.avatar}
-                          alt={kol.name}
-                          className="h-full w-full object-cover"
-                        />
-                        {isSelected && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                            <Check className="h-5 w-5 text-yellow" strokeWidth={2.5} />
-                          </div>
-                        )}
+
+                      {/* Name label — bottom-left, faded bg */}
+                      <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
+                        <p className={cn(
+                          "truncate text-left text-[11px] font-semibold leading-none drop-shadow",
+                          isSelected ? "text-yellow" : "text-white",
+                        )}>{kol.name}</p>
                       </div>
-                      {/* Name */}
-                      <p className={cn(
-                        "w-full truncate text-center text-[11px] font-medium leading-none",
-                        isSelected ? "text-yellow" : "text-white/70",
-                      )}>{kol.name}</p>
                     </motion.button>
                   );
                 })}
