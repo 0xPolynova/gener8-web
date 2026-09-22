@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import type { Kol } from "./KolPicker";
 
@@ -63,7 +63,7 @@ export function StylePicker({ kol, onClose, onPick }: StylePickerProps) {
           <motion.div
             key="style-panel"
             id="style-picker-panel"
-            className="fixed inset-x-0 bottom-[15.5rem] md:bottom-[12.5rem] z-[23] mx-auto w-[calc(100%-2rem)] max-w-3xl"
+            className="fixed inset-x-0 top-[4.75rem] z-[23] mx-auto w-[calc(100%-2rem)] max-h-[calc(100vh-4.75rem-10.5rem)] max-w-3xl overflow-y-auto"
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
@@ -120,8 +120,10 @@ export function StylePicker({ kol, onClose, onPick }: StylePickerProps) {
                   ) : (
                     <div
                       key={`slot-${index}`}
-                      className="aspect-[9/16] animate-pulse rounded-lg bg-white/8"
-                    />
+                      className="flex aspect-[9/16] items-center justify-center rounded-lg bg-white/8"
+                    >
+                      <Loader2 className="h-5 w-5 animate-spin text-white/50" />
+                    </div>
                   ),
                 )}
               </div>
