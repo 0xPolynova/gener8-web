@@ -1,0 +1,11 @@
+---
+description: Gener8 API lives in gener8/ — keep secrets and server logic there
+alwaysApply: true
+---
+
+# Server vs frontend
+
+- **API server:** `gener8/` (GitHub `VeroServices/gener8`, live at `https://gener8.onrender.com`). All auth, token gating, generation, Supabase, and other secrets go here.
+- **Frontend:** this Next.js app. It only calls the API via `NEXT_PUBLIC_API_URL`. Do not add Next.js `/api` routes or put `SUPABASE_SERVICE_ROLE_KEY` / `SESSION_SECRET` / provider keys in the frontend.
+
+When changing backend behavior, edit files under `gener8/` and push that repo. Local API: `cd gener8 && npm run dev` (port 4000). Production API URL: `https://gener8.onrender.com`.
