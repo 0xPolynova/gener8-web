@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Heart, Share2, Shuffle } from "lucide-react";
@@ -16,7 +15,7 @@ import {
   formatRelativeTime,
 } from "@/lib/format";
 import type { VideoWithCreator } from "@/types";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, mediaUrl } from "@/lib/api";
 import { XLink } from "@/components/brand/XLink";
 
 export function VideoDetail({ id }: { id: string }) {
@@ -91,9 +90,9 @@ export function VideoDetail({ id }: { id: string }) {
       <div
         className={`relative overflow-hidden rounded-[14px] border border-line bg-black ${frame}`}
       >
-        {video.videoUrl ? (
+        {mediaUrl(video.videoUrl) ? (
           <video
-            src={video.videoUrl}
+            src={mediaUrl(video.videoUrl) ?? undefined}
             className="absolute inset-0 h-full w-full object-cover object-center"
             controls
             autoPlay

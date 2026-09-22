@@ -17,7 +17,7 @@ import { VideoThumb } from "@/components/video/VideoThumb";
 import { useToast } from "@/components/ui/Toast";
 import { useAppState } from "@/components/providers/AppState";
 import { WalletButton } from "@/components/wallet/WalletButton";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, mediaUrl } from "@/lib/api";
 import { formatCount, formatRelativeTime, promptPreview } from "@/lib/format";
 import type { CreationsTab, VideoWithCreator } from "@/types";
 
@@ -188,8 +188,8 @@ export function CreationsDashboard() {
                   <Shuffle className="h-3.5 w-3.5" />
                   Remix
                 </Button>
-                {video.videoUrl && (
-                  <a href={video.videoUrl} download>
+                {mediaUrl(video.videoUrl) && (
+                  <a href={mediaUrl(video.videoUrl) ?? undefined} download>
                     <Button variant="ghost" size="sm">
                       <Download className="h-3.5 w-3.5" />
                       Download

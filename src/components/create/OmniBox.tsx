@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { X, Plus, Sparkles, Settings2, ChevronDown, Shuffle, Users } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, mediaUrl } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
@@ -448,12 +448,12 @@ export function OmniBox() {
           <div className="mx-3 mb-2 flex items-center gap-2.5 rounded-xl border border-yellow/20 bg-yellow/5 p-2">
             {/* Thumbnail */}
             <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-ink">
-              {remix.thumbnailUrl ? (
+              {mediaUrl(remix.thumbnailUrl) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={remix.thumbnailUrl} alt={remix.title} className="h-full w-full object-cover" />
-              ) : (
-                <video src={remix.url} className="h-full w-full object-cover" muted playsInline />
-              )}
+                <img src={mediaUrl(remix.thumbnailUrl) ?? undefined} alt={remix.title} className="h-full w-full object-cover" />
+              ) : mediaUrl(remix.url) ? (
+                <video src={mediaUrl(remix.url) ?? undefined} className="h-full w-full object-cover" muted playsInline />
+              ) : null}
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <Shuffle className="h-3.5 w-3.5 text-yellow" />
               </div>

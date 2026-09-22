@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { formatElapsed } from "@/lib/format";
+import { mediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { AspectRatio, GenerationStatus, VideoWithCreator } from "@/types";
 
@@ -72,8 +73,8 @@ export function PreviewStage({
           <GeneratingFrame status={status} startedAt={startedAt} />
         )}
         {status === "failed" && <FailedFrame onRegenerate={onRegenerate} />}
-        {status === "complete" && video?.videoUrl && (
-          <CompletedFrame videoUrl={video.videoUrl} />
+        {status === "complete" && mediaUrl(video?.videoUrl) && (
+          <CompletedFrame videoUrl={mediaUrl(video?.videoUrl) ?? ""} />
         )}
       </div>
 
@@ -84,12 +85,14 @@ export function PreviewStage({
             compact ? "justify-start px-4 py-3" : "items-center justify-center px-4 py-4",
           )}
         >
-          <a href={video.videoUrl} download>
+          {mediaUrl(video.videoUrl) && (
+          <a href={mediaUrl(video.videoUrl) ?? undefined} download>
             <Button variant="outline" size="sm">
               <Download className="h-3.5 w-3.5" />
               Download
             </Button>
           </a>
+          )}
           <Button size="sm" onClick={onPublish}>
             <Upload className="h-3.5 w-3.5" />
             {video.visibility === "public" ? "Unpublish" : "Publish"}

@@ -1,9 +1,13 @@
+import { mediaUrl } from "@/lib/api";
+
 /** Prefer a stored still; for Cloudflare Stream, derive one from the playback URL. */
 export function stillFromVideo(videoUrl: string | null, thumbnailUrl: string | null) {
-  if (thumbnailUrl) return thumbnailUrl;
-  if (!videoUrl) return null;
+  const thumb = mediaUrl(thumbnailUrl);
+  if (thumb) return thumb;
+  const playable = mediaUrl(videoUrl);
+  if (!playable) return null;
   try {
-    const url = new URL(videoUrl);
+    const url = new URL(playable);
     if (!url.hostname.endsWith("cloudflarestream.com")) return null;
     const uid = url.pathname.split("/").filter(Boolean)[0];
     if (!uid) return null;

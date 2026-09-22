@@ -10,6 +10,28 @@ export function apiUrl(path: string) {
   return base ? `${base}${p}` : p;
 }
 
+/** Drop media URLs that point at a local API the browser cannot reach. */
+export function mediaUrl(input: string | null | undefined): string | null {
+  if (!input) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return input;
+  }
+  const loopback = parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost";
+  if (!loopback) return input;
+  const api = apiBase();
+  if (!api) return null;
+  try {
+    const apiHost = new URL(api).hostname;
+    if (apiHost === "127.0.0.1" || apiHost === "localhost") return input;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function getApiToken() {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);

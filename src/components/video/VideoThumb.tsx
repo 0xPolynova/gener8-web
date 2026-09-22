@@ -7,6 +7,7 @@ import {
   readCachedStill,
   stillFromVideo,
 } from "@/lib/video/thumbnail";
+import { mediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { PosterPalette } from "@/types";
 
@@ -40,12 +41,10 @@ export function VideoThumb({
     readCachedStill(videoUrl),
   );
 
+  const playable = mediaUrl(videoUrl);
   const still = stillFromVideo(videoUrl, thumbnailUrl) ?? capturedStill;
-  // With a still, wait until hover to fetch the MP4. After the first hover
-  // keep the element mounted so the next play is instant. Without a still,
-  // load in view just long enough to paint / capture a frame.
   const mountVideo =
-    Boolean(videoUrl) && (playing || warmed || (inView && !still));
+    Boolean(playable) && (playing || warmed || (inView && !still));
   const live = playing && playbackReady;
 
   useEffect(() => {
@@ -124,7 +123,7 @@ export function VideoThumb({
       {mountVideo && (
         <video
           ref={videoRef}
-          src={videoUrl ?? undefined}
+          src={playable ?? undefined}
           poster={still ?? undefined}
           muted={muted}
           loop
