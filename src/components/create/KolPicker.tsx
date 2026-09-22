@@ -43,10 +43,11 @@ interface KolPickerProps {
   open: boolean;
   selected: string[];
   onToggle: (handle: string) => void;
+  onStyle: (kol: Kol) => void;
   onClose: () => void;
 }
 
-export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps) {
+export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPickerProps) {
   if (typeof document === "undefined") return null;
 
   return createPortal(
@@ -97,12 +98,20 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                 {KOLS.map((kol) => {
                   const isSelected = selected.includes(kol.handle);
                   return (
-                    <motion.button
+                    <motion.div
                       key={kol.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onToggle(kol.handle)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onToggle(kol.handle);
+                        }
+                      }}
                       whileTap={{ scale: 0.97 }}
                       className={cn(
-                        "group relative w-full aspect-square overflow-hidden rounded-xl transition-all duration-150",
+                        "group relative w-full aspect-square overflow-hidden rounded-xl transition-all duration-150 cursor-pointer",
                         isSelected ? "ring-2 ring-inset ring-yellow/70" : "",
                       )}
                     >
@@ -113,7 +122,17 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                         className="h-full w-full object-cover"
                       />
 
-                      {/* Selected check */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStyle(kol);
+                        }}
+                        className="absolute left-1.5 top-1.5 rounded-md bg-yellow px-1.5 py-0.5 text-[11px] font-semibold text-ink"
+                      >
+                        Style
+                      </button>
+
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5">
                           <Check className="h-4 w-4 text-yellow drop-shadow" strokeWidth={2.5} />
@@ -127,7 +146,7 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                           isSelected ? "text-yellow" : "text-white",
                         )}>{kol.name}</p>
                       </div>
-                    </motion.button>
+                    </motion.div>
                   );
                 })}
               </div>

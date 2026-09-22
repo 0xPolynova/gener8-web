@@ -6,7 +6,8 @@ import { apiFetch, mediaUrl } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
-import { KolPicker, KOLS } from "./KolPicker";
+import { KolPicker, KOLS, type Kol } from "./KolPicker";
+import { StylePicker } from "./StylePicker";
 
 interface OmniMedia {
   id: string;
@@ -78,7 +79,7 @@ function serializeEditor(root: HTMLElement): string {
   return out.replace(/\u00a0/g, " ").replace(/\n+$/g, "").trim();
 }
 
-function makeChip(token: string, imageUrl: string | null) {
+function makeChip(token: string, imageUrl: string | null, display?: string) {
   const span = document.createElement("span");
   span.contentEditable = "false";
   span.dataset.token = token;
@@ -93,14 +94,14 @@ function makeChip(token: string, imageUrl: string | null) {
     span.appendChild(img);
   }
   const label = document.createElement("span");
-  label.textContent = token;
+  label.textContent = display ?? token;
   span.appendChild(label);
   return span;
 }
 
-function insertChip(editor: HTMLElement, token: string, imageUrl: string | null) {
+function insertChip(editor: HTMLElement, token: string, imageUrl: string | null, display?: string) {
   if (editor.querySelector(tokenSelector(token))) return;
-  const chip = makeChip(token, imageUrl);
+  const chip = makeChip(token, imageUrl, display);
   const frag = document.createDocumentFragment();
   frag.appendChild(document.createTextNode(" "));
   frag.appendChild(chip);
@@ -167,6 +168,7 @@ export function OmniBox() {
   const [settings, setSettings] = useState<OmniSettings>({ ratio: "16:9", duration: 15 });
   const [showSettings, setShowSettings] = useState(false);
   const [showKols, setShowKols] = useState(false);
+  const [styleKol, setStyleKol] = useState<Kol | null>(null);
   const [selectedKols, setSelectedKols] = useState<string[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -188,9 +190,13 @@ export function OmniBox() {
       return filtered.length === prev.length ? prev : filtered;
     });
     setMedia((prev) => {
-      const filtered = prev.filter((m) => tokens.has(`@${m.label}`));
+      const filtered = prev.filter(
+        (m) => tokens.has(`@${m.label}`) || Boolean(m.uploadedUrl && next.includes(m.uploadedUrl)),
+      );
       if (filtered.length === prev.length) return prev;
-      prev.filter((m) => !tokens.has(`@${m.label}`)).forEach((m) => URL.revokeObjectURL(m.localUrl));
+      prev
+        .filter((m) => !filtered.includes(m) && m.localUrl.startsWith("blob:"))
+        .forEach((m) => URL.revokeObjectURL(m.localUrl));
       return filtered;
     });
   }, []);
@@ -241,6 +247,16 @@ export function OmniBox() {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [showKols]);
+
+  useEffect(() => {
+    if (!styleKol) return;
+    const onDown = (e: MouseEvent) => {
+      if (document.getElementById("style-picker-panel")?.contains(e.target as Node)) return;
+      setStyleKol(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [styleKol]);
 
   /* Listen for remix events */
   useEffect(() => {
@@ -304,6 +320,30 @@ export function OmniBox() {
     ].join(" ");
     fillEditor(editor, text, images);
     setPrompt(serializeEditor(editor));
+  };
+
+  const useStyleImage = (url: string) => {
+    setMedia((prev) => {
+      if (prev.some((item) => item.uploadedUrl === url)) return prev;
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          type: "image" as const,
+          localUrl: url,
+          uploadedUrl: url,
+          label: nextLabel("image"),
+          uploading: false,
+        },
+      ];
+    });
+    const editor = editorRef.current;
+    if (editor) {
+      insertChip(editor, url, url, "Style");
+      setPrompt(serializeEditor(editor));
+      editor.focus();
+    }
+    setStyleKol(null);
   };
 
   const toggleKol = (handle: string) => {
@@ -783,7 +823,13 @@ export function OmniBox() {
       open={showKols}
       selected={selectedKols}
       onToggle={toggleKol}
+      onStyle={(kol) => setStyleKol(kol)}
       onClose={() => setShowKols(false)}
+    />
+    <StylePicker
+      kol={styleKol}
+      onClose={() => setStyleKol(null)}
+      onPick={useStyleImage}
     />
   </>
   );
