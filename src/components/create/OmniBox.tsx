@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
-import { KolPicker } from "./KolPicker";
+import { KolPicker, KOLS } from "./KolPicker";
 
 interface OmniMedia {
   id: string;
@@ -372,18 +372,25 @@ export function OmniBox() {
         {/* Bottom bar — thumbnails + controls */}
         <div className="flex items-center gap-2 border-t border-white/5 px-3 py-2">
           <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0">
-            {/* Selected KOL chips */}
-            {selectedKols.map((handle) => (
-              <span
-                key={handle}
-                className="inline-flex items-center gap-1 rounded-full border border-yellow/30 bg-yellow/10 px-2 py-0.5 text-[11px] font-medium text-yellow flex-shrink-0"
-              >
-                @{handle}
-                <button onClick={() => toggleKol(handle)} className="opacity-60 hover:opacity-100">
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </span>
-            ))}
+            {/* Selected KOL chips — avatar + handle */}
+            {selectedKols.map((handle) => {
+              const kol = KOLS.find((k) => k.handle === handle);
+              return (
+                <span
+                  key={handle}
+                  className="inline-flex items-center gap-1 rounded-full border border-yellow/30 bg-yellow/10 pl-0.5 pr-2 py-0.5 text-[11px] font-medium text-yellow flex-shrink-0"
+                >
+                  {kol && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={kol.avatar} alt={kol.name} className="h-5 w-5 rounded-full object-cover border border-yellow/20 flex-shrink-0" />
+                  )}
+                  @{handle}
+                  <button onClick={() => toggleKol(handle)} className="opacity-60 hover:opacity-100 ml-0.5">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              );
+            })}
             {/* Media thumbnails */}
             {media.map((item) => (
               <div key={item.id} className="group/thumb relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">

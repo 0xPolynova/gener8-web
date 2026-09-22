@@ -91,8 +91,8 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                 </button>
               </div>
 
-              {/* Grid 4×5 */}
-              <div className="grid grid-cols-5 gap-px p-px">
+              {/* Grid 3×6 */}
+              <div className="grid grid-cols-6 gap-1 p-1.5">
                 {KOLS.map((kol) => {
                   const isSelected = selected.includes(kol.handle);
                   return (
@@ -101,11 +101,10 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                       onClick={() => onToggle(kol.handle)}
                       whileTap={{ scale: 0.97 }}
                       className={cn(
-                        "group relative w-full aspect-square overflow-hidden transition-all duration-150",
-                        isSelected ? "ring-2 ring-inset ring-yellow/60" : "",
+                        "group relative w-full aspect-square overflow-hidden rounded-xl transition-all duration-150",
+                        isSelected ? "ring-2 ring-inset ring-yellow/70" : "",
                       )}
                     >
-                      {/* Avatar — fills entire cell */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={kol.avatar}
@@ -113,17 +112,17 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                         className="h-full w-full object-cover"
                       />
 
-                      {/* Selected overlay */}
+                      {/* Selected check */}
                       {isSelected && (
-                        <div className="absolute inset-0 flex items-start justify-end p-1.5 bg-yellow/10">
+                        <div className="absolute top-1.5 right-1.5">
                           <Check className="h-4 w-4 text-yellow drop-shadow" strokeWidth={2.5} />
                         </div>
                       )}
 
-                      {/* Name label — bottom-left, faded bg */}
-                      <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
+                      {/* Name label — bottom-left with generous gradient bg */}
+                      <div className="absolute bottom-0 left-0 right-0 px-2 pt-6 pb-1.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
                         <p className={cn(
-                          "truncate text-left text-[11px] font-semibold leading-none drop-shadow",
+                          "truncate text-left text-[13px] font-semibold leading-tight drop-shadow",
                           isSelected ? "text-yellow" : "text-white",
                         )}>{kol.name}</p>
                       </div>
