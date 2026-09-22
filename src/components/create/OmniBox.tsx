@@ -183,6 +183,7 @@ export function OmniBox() {
   const [showSettings, setShowSettings] = useState(false);
   const [showKols, setShowKols] = useState(false);
   const [styleKol, setStyleKol] = useState<Kol | null>(null);
+  const [styleMode, setStyleMode] = useState<"new" | "community">("new");
   const [styleSession, setStyleSession] = useState(0);
   const [selectedKols, setSelectedKols] = useState<string[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -257,6 +258,7 @@ export function OmniBox() {
       const target = e.target as Node;
       if (kolButtonRef.current?.contains(target)) return;
       if (document.getElementById("kol-picker-panel")?.contains(target)) return;
+      if (document.getElementById("style-picker-panel")?.contains(target)) return;
       setShowKols(false);
     };
     document.addEventListener("mousedown", onDown);
@@ -875,14 +877,16 @@ export function OmniBox() {
       open={showKols}
       selected={selectedKols}
       onToggle={toggleKol}
-      onStyle={(kol) => {
+      onStyle={(kol, mode) => {
         setStyleSession((n) => n + 1);
+        setStyleMode(mode);
         setStyleKol(kol);
       }}
       onClose={() => setShowKols(false)}
     />
     <StylePicker
       kol={styleKol}
+      mode={styleMode}
       session={styleSession}
       onClose={() => setStyleKol(null)}
       onPick={useStyleImage}

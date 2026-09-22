@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
@@ -43,8 +44,54 @@ interface KolPickerProps {
   open: boolean;
   selected: string[];
   onToggle: (handle: string) => void;
-  onStyle: (kol: Kol) => void;
+  onStyle: (kol: Kol, mode: "new" | "community") => void;
   onClose: () => void;
+}
+
+function StyleButton({ onPick }: { onPick: (mode: "new" | "community") => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className="absolute left-1.5 top-1.5 z-10"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="absolute bottom-full left-0 flex flex-col gap-1 pb-1"
+            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 420, damping: 28 }}
+          >
+            <button
+              type="button"
+              onClick={() => onPick("new")}
+              className="whitespace-nowrap rounded-md bg-[#ffe9a3] px-1.5 py-0.5 text-[11px] font-semibold text-ink"
+            >
+              New
+            </button>
+            <button
+              type="button"
+              onClick={() => onPick("community")}
+              className="whitespace-nowrap rounded-md bg-[#f3d36a] px-1.5 py-0.5 text-[11px] font-semibold text-ink"
+            >
+              Community styles
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <button
+        type="button"
+        className="rounded-md bg-yellow px-1.5 py-0.5 text-[11px] font-semibold text-ink"
+      >
+        Style
+      </button>
+    </div>
+  );
 }
 
 export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPickerProps) {
@@ -122,16 +169,7 @@ export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPic
                         className="h-full w-full object-cover"
                       />
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onStyle(kol);
-                        }}
-                        className="absolute left-1.5 top-1.5 rounded-md bg-yellow px-1.5 py-0.5 text-[11px] font-semibold text-ink"
-                      >
-                        Style
-                      </button>
+                      <StyleButton onPick={(mode) => onStyle(kol, mode)} />
 
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5">
