@@ -39,17 +39,35 @@ html {
   background: var(--ink);
   color: #ffffff;
   color-scheme: dark;
-  font-size: 16.9px;
+  /* 18px root — scales all rem units up ~12.5% vs browser default,
+     matching arcgen.fun's generous body text feel */
+  font-size: 18px;
 }
 
 body {
   background: var(--ink);
   color: #ffffff;
-  font-family: var(--font-geist-sans), Inter, system-ui, sans-serif;
-  font-size: 16.9px; /* ~30% larger than the default 13px design base */
+  font-family: var(--font-geist-sans), "Geist", ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem; /* 16.875px — matches arcgen.fun body copy */
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.6;
   min-height: 100%;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ArcGen-style heading scale */
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 700; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.875rem); font-weight: 700; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+h4 { font-size: 1.0625rem; font-weight: 600; }
 
 ::selection {
   background: var(--yellow);
@@ -206,5 +224,5 @@ body {
 
 .wallet-adapter-modal-wrapper,
 .wallet-adapter-modal {
-  font-family: var(--font-geist-sans), Inter, system-ui, sans-serif !important;
+  font-family: var(--font-geist-sans), "Geist", ui-sans-serif, system-ui, sans-serif !important;
 }
