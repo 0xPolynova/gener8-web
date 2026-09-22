@@ -67,7 +67,7 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
           {/* Grid panel — z-[21], centered, above backdrop, below OmniBox */}
           <motion.div
             key="kol-panel"
-            className="fixed inset-x-0 top-1/2 z-[21] mx-auto w-[calc(100%-2rem)] max-w-2xl -translate-y-1/2 px-0"
+            className="fixed inset-x-0 top-1/2 z-[21] mx-auto w-[calc(100%-2rem)] max-w-3xl -translate-y-1/2 px-0"
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
@@ -92,7 +92,7 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
               </div>
 
               {/* Grid 4×5 */}
-              <div className="grid grid-cols-5 gap-2 p-3">
+              <div className="grid grid-cols-5 gap-1 p-1.5">
                 {KOLS.map((kol) => {
                   const isSelected = selected.includes(kol.handle);
                   return (
@@ -101,7 +101,7 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                       onClick={() => onToggle(kol.handle)}
                       whileTap={{ scale: 0.93 }}
                       className={cn(
-                        "group relative flex flex-col items-center gap-1.5 rounded-xl p-2 transition-all duration-150",
+                        "group relative flex flex-col items-center gap-1 rounded-xl p-1.5 transition-all duration-150",
                         isSelected
                           ? "bg-yellow/12 ring-1 ring-yellow/40"
                           : "hover:bg-white/6",
@@ -111,8 +111,8 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                       {isSelected && (
                         <div className="pointer-events-none absolute inset-0 rounded-xl bg-yellow/8 blur-sm" />
                       )}
-                      {/* Avatar */}
-                      <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/10">
+                      {/* Avatar — fills the column width */}
+                      <div className="relative w-full aspect-square overflow-hidden rounded-xl border border-white/10">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={kol.avatar}
@@ -121,13 +121,13 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
                         />
                         {isSelected && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                            <Check className="h-4 w-4 text-yellow" strokeWidth={2.5} />
+                            <Check className="h-5 w-5 text-yellow" strokeWidth={2.5} />
                           </div>
                         )}
                       </div>
                       {/* Name */}
                       <p className={cn(
-                        "w-full truncate text-center text-[10px] font-medium leading-none",
+                        "w-full truncate text-center text-[11px] font-medium leading-none",
                         isSelected ? "text-yellow" : "text-white/70",
                       )}>{kol.name}</p>
                     </motion.button>
