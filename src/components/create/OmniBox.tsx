@@ -381,7 +381,10 @@ export function OmniBox() {
     })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) return;
+        if (!res.ok) {
+          toast(data.error ?? "Couldn’t save that style for everyone.", "error");
+          return;
+        }
         if (data.cdn && data.url && data.url !== pick.url) {
           const editor = editorRef.current;
           if (editor) {
