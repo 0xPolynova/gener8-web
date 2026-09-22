@@ -7,7 +7,9 @@ import { VideoCardSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAppState } from "@/components/providers/AppState";
 import { promptPreview } from "@/lib/format";
-import type { GridSpan, VideoWithCreator } from "@/types";
+import { BrandMark } from "@/components/brand/Logo";
+import { cn } from "@/lib/utils";
+import type { DiscoverFilter, GridSpan, VideoWithCreator } from "@/types";
 import { apiFetch } from "@/lib/api";
 
 const ORDER_KEY = "gener8_discover_order";
@@ -47,17 +49,27 @@ function readSavedOrder(): string[] | null {
   }
 }
 
+const FILTERS: { id: DiscoverFilter; label: string }[] = [
+  { id: "trending", label: "Trending" },
+  { id: "viral", label: "viral" },
+  { id: "tokens", label: "tokens" },
+  { id: "memecoins", label: "memecoins" },
+  { id: "pnl", label: "P&L" },
+  { id: "music", label: "music" },
+];
+
 export function DiscoverFeed() {
   const { toast } = useToast();
   const { session } = useAppState();
   const [videos, setVideos] = useState<VideoWithCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
+  const [filter, setFilter] = useState<DiscoverFilter>("trending");
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    apiFetch("/api/videos?filter=trending")
+    apiFetch(`/api/videos?filter=${filter}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -73,7 +85,7 @@ export function DiscoverFeed() {
     return () => {
       cancelled = true;
     };
-  }, [toast]);
+  }, [toast, filter]);
 
   const onLike = async (id: string) => {
     if (!session) {
@@ -122,6 +134,27 @@ export function DiscoverFeed() {
         <p className="mt-1 text-sm text-muted">
           Discover generated videos. Hover to play.
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {FILTERS.map((item) => {
+            const active = item.id === filter;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setFilter(item.id)}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors",
+                  active
+                    ? "border-white/40 bg-white/10"
+                    : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/8",
+                )}
+              >
+                <BrandMark size={18} />
+                <span className="text-[14px] font-bold text-white">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="grid grid-cols-2 items-stretch gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:auto-rows-[220px]">
         {loading &&

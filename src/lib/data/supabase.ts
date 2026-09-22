@@ -362,7 +362,8 @@ export async function sbListDiscover(
     query = query.in("user_id", ids);
   } else if (
     filter !== "trending" &&
-    filter !== "latest"
+    filter !== "latest" &&
+    filter !== "viral"
   ) {
     query = query.eq("category", filter);
   }
@@ -377,6 +378,8 @@ export async function sbListDiscover(
     sortByDiscoverOrder(list);
   } else if (filter === "following") {
     list.sort((a, b) => b.likes + b.views / 8 - (a.likes + a.views / 8));
+  } else if (filter === "viral") {
+    list.sort((a, b) => b.views - a.views || b.likes - a.likes);
   }
 
   if (filter !== "trending" && filter !== "latest") {
