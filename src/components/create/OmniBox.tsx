@@ -105,7 +105,14 @@ function makeChip(token: string, imageUrl: string | null, display?: string, thin
   return span;
 }
 
-function insertChip(editor: HTMLElement, token: string, imageUrl: string | null, display?: string, thin?: string) {
+function insertChip(
+  editor: HTMLElement,
+  token: string,
+  imageUrl: string | null,
+  display?: string,
+  thin?: string,
+  atEnd = false,
+) {
   if (editor.querySelector(tokenSelector(token))) return;
   const chip = makeChip(token, imageUrl, display, thin);
   const frag = document.createDocumentFragment();
@@ -115,17 +122,18 @@ function insertChip(editor: HTMLElement, token: string, imageUrl: string | null,
 
   const sel = window.getSelection();
   const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
-  if (range && editor.contains(range.startContainer)) {
+  if (!atEnd && range && editor.contains(range.startContainer)) {
     range.deleteContents();
     range.insertNode(frag);
-    const after = document.createRange();
-    after.setStartAfter(chip);
-    after.collapse(true);
-    sel?.removeAllRanges();
-    sel?.addRange(after);
   } else {
     editor.appendChild(frag);
   }
+  const after = document.createRange();
+  after.setStartAfter(chip);
+  after.collapse(true);
+  sel?.removeAllRanges();
+  sel?.addRange(after);
+  editor.focus();
 }
 
 function removeChip(editor: HTMLElement, token: string) {
@@ -349,7 +357,7 @@ export function OmniBox() {
       const editor = editorRef.current;
       if (editor) {
         const handle = kol?.handle;
-        insertChip(editor, url, url, handle ? `@${handle}` : "Style", handle ? "STYLED" : undefined);
+        insertChip(editor, url, url, handle ? `@${handle}` : "Style", handle ? "STYLED" : undefined, true);
         setPrompt(serializeEditor(editor));
         editor.focus();
       }
@@ -375,13 +383,7 @@ export function OmniBox() {
           const editor = editorRef.current;
           if (editor) {
             removeChip(editor, pick.url);
-            insertChip(
-              editor,
-              data.url,
-              data.url,
-              `@${kol.handle}`,
-              "STYLED",
-            );
+            insertChip(editor, data.url, data.url, `@${kol.handle}`, "STYLED", true);
             setPrompt(serializeEditor(editor));
           }
           setMedia((prev) =>
@@ -405,7 +407,7 @@ export function OmniBox() {
       if (editor) removeChip(editor, token);
     } else {
       setSelectedKols((prev) => (prev.includes(handle) ? prev : [...prev, handle]));
-      if (editor) insertChip(editor, token, kol?.avatar ?? null);
+      if (editor) insertChip(editor, token, kol?.avatar ?? null, undefined, undefined, true);
     }
     if (editor) setPrompt(serializeEditor(editor));
   };
@@ -455,7 +457,7 @@ export function OmniBox() {
           uploading: true,
         };
         setMedia((prev) => [...prev, item]);
-        if (editorRef.current) insertChip(editorRef.current, `@${label}`, item.localUrl);
+        if (editorRef.current) insertChip(editorRef.current, `@${label}`, item.localUrl, undefined, undefined, true);
 
         const form = new FormData();
         form.append("file", file);
