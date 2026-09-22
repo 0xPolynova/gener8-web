@@ -127,14 +127,7 @@ export function DiscoverFeed() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-[28px] font-semibold tracking-tight text-paper">
-          Discover
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Discover generated videos. Hover to play.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-2.5">
           {FILTERS.map((item) => {
             const active = item.id === filter;
             return (
@@ -143,19 +136,18 @@ export function DiscoverFeed() {
                 type="button"
                 onClick={() => setFilter(item.id)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors",
+                  "inline-flex items-center gap-2.5 rounded-xl border px-4 py-3 transition-colors",
                   active
                     ? "border-white/40 bg-white/10"
                     : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/8",
                 )}
               >
-                <BrandMark size={18} />
-                <span className="text-[14px] font-bold text-white">{item.label}</span>
+                <BrandMark size={26} />
+                <span className="text-[18px] font-bold text-white">{item.label}</span>
               </button>
             );
           })}
         </div>
-      </div>
       <div className="grid grid-cols-2 items-stretch gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:auto-rows-[220px]">
         {loading &&
           Array.from({ length: 8 }).map((_, i) => (
