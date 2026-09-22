@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { X, Plus, Sparkles, Settings2, ChevronDown, Shuffle } from "lucide-react";
+import { X, Plus, Sparkles, Settings2, ChevronDown, Shuffle, Users } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
+import { KolPicker } from "./KolPicker";
 
 interface OmniMedia {
   id: string;
@@ -61,6 +62,8 @@ export function OmniBox() {
   const [remix, setRemix] = useState<RemixVideo | null>(null);
   const [settings, setSettings] = useState<OmniSettings>({ ratio: "16:9", duration: 15 });
   const [showSettings, setShowSettings] = useState(false);
+  const [showKols, setShowKols] = useState(false);
+  const [selectedKols, setSelectedKols] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const remaining = eligibility?.remainingToday ?? eligibility?.dailyLimit ?? 0;
@@ -114,6 +117,30 @@ export function OmniBox() {
   const clearRemix = () => {
     setRemix(null);
     setPrompt("");
+  };
+
+  const toggleKol = (handle: string) => {
+    const ref = `@${handle}`;
+    setSelectedKols((prev) => {
+      const next = prev.includes(handle)
+        ? prev.filter((h) => h !== handle)
+        : [...prev, handle];
+
+      // Keep prompt @mentions in sync
+      if (prev.includes(handle)) {
+        // remove it from prompt
+        setPrompt((p) =>
+          p
+            .replace(new RegExp(`\\s*${ref}\\b`, "g"), "")
+            .replace(new RegExp(`\\b${ref}\\s*`, "g"), "")
+            .trim(),
+        );
+      } else {
+        // append to prompt
+        setPrompt((p) => (p ? `${p} ${ref}` : ref));
+      }
+      return next;
+    });
   };
 
   const handleFiles = useCallback(
@@ -215,6 +242,7 @@ export function OmniBox() {
       setPrompt("");
       setMedia([]);
       setRemix(null);
+      setSelectedKols([]);
       imgSeq = 0;
       vidSeq = 0;
     } catch (err) {
@@ -343,8 +371,20 @@ export function OmniBox() {
         {/* Bottom bar — thumbnails + controls */}
         <div className="flex items-center gap-2 border-t border-white/5 px-3 py-2">
           <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0">
+            {/* Selected KOL chips */}
+            {selectedKols.map((handle) => (
+              <span
+                key={handle}
+                className="inline-flex items-center gap-1 rounded-full border border-yellow/30 bg-yellow/10 px-2 py-0.5 text-[11px] font-medium text-yellow flex-shrink-0"
+              >
+                @{handle}
+                <button onClick={() => toggleKol(handle)} className="opacity-60 hover:opacity-100">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            ))}
+            {/* Media thumbnails */}
             {media.map((item) => (
-              /* Thumbnail square with X overlay */
               <div key={item.id} className="group/thumb relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
                 {item.type === "video" ? (
                   <video src={item.localUrl} className="h-full w-full object-cover" muted />
@@ -357,7 +397,6 @@ export function OmniBox() {
                     <span className="h-2.5 w-2.5 rounded-full border-2 border-yellow border-t-transparent animate-spin" />
                   </div>
                 ) : (
-                  /* X button — always visible on mobile, hover on desktop */
                   <button
                     onClick={() => removeMedia(item.id)}
                     className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 group-hover/thumb:opacity-100 transition-opacity"
@@ -377,12 +416,31 @@ export function OmniBox() {
               onChange={(e) => handleFiles(e.target.files)}
               onClick={(e) => { (e.target as HTMLInputElement).value = ""; }}
             />
+            {/* Media button */}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={!session || submitting}
               className="flex h-8 items-center gap-1 flex-shrink-0 rounded-lg border border-dashed border-white/20 px-2 text-[12px] font-medium text-white/50 hover:border-white/40 hover:text-white transition-colors disabled:opacity-40"
             >
               <Plus className="h-3 w-3" /> Media
+            </button>
+            {/* KOLs button */}
+            <button
+              onClick={() => setShowKols(true)}
+              disabled={!session || submitting}
+              className={cn(
+                "flex h-8 items-center gap-1 flex-shrink-0 rounded-lg border px-2 text-[12px] font-medium transition-colors disabled:opacity-40",
+                selectedKols.length > 0
+                  ? "border-yellow/40 bg-yellow/10 text-yellow"
+                  : "border-dashed border-white/20 text-white/50 hover:border-white/40 hover:text-white",
+              )}
+            >
+              <Users className="h-3 w-3" /> KOLs
+              {selectedKols.length > 0 && (
+                <span className="ml-0.5 rounded-full bg-yellow px-1 text-[10px] font-bold text-ink">
+                  {selectedKols.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -408,5 +466,13 @@ export function OmniBox() {
         </div>
       </div>
     </div>
+
+    {/* KOL picker — portal-rendered at z-[21], below OmniBox at z-30 */}
+    <KolPicker
+      open={showKols}
+      selected={selectedKols}
+      onToggle={toggleKol}
+      onClose={() => setShowKols(false)}
+    />
   );
 }
