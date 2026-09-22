@@ -88,11 +88,11 @@ export function WalletButton() {
         {menu && (
           <>
             <button
-              className="fixed inset-0 z-30 cursor-default"
+              className="fixed inset-0 z-50 cursor-default"
               onClick={() => setMenu(false)}
               aria-label="Close menu"
             />
-            <div className="absolute right-0 z-40 mt-2 w-52 overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+            <div className="absolute right-0 z-60 mt-2 w-52 overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
               {user?.username && (
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-paper hover:bg-elevated"

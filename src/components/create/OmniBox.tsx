@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { X, Plus, Sparkles, Settings2, ChevronDown } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
@@ -17,7 +17,6 @@ interface OmniMedia {
 }
 
 interface OmniSettings {
-  resolution: "720P" | "1080P";
   ratio: "16:9" | "9:16" | "1:1" | "4:3" | "3:4";
   duration: number;
 }
@@ -34,20 +33,29 @@ function nextLabel(type: "image" | "video") {
 export function OmniBox() {
   const { session, eligibility } = useAppState();
   const { toast } = useToast();
+  const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [prompt, setPrompt] = useState("");
   const [media, setMedia] = useState<OmniMedia[]>([]);
-  const [settings, setSettings] = useState<OmniSettings>({
-    resolution: "720P",
-    ratio: "16:9",
-    duration: 15,
-  });
+  const [settings, setSettings] = useState<OmniSettings>({ ratio: "16:9", duration: 15 });
   const [showSettings, setShowSettings] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const remaining = eligibility?.remainingToday ?? eligibility?.dailyLimit ?? 0;
+
+  /* Close settings on click outside */
+  useEffect(() => {
+    if (!showSettings) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSettings(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSettings]);
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
@@ -127,7 +135,7 @@ export function OmniBox() {
             model: "wan3.0-video",
             aspectRatio: settings.ratio,
             duration: settings.duration,
-            quality: settings.resolution === "1080P" ? "high" : "standard",
+            quality: "standard",
             negativePrompt: "",
             seed: null,
             cameraMovement: "static",
@@ -154,28 +162,19 @@ export function OmniBox() {
   };
 
   return (
-    /* Fixed floating bar — above MobileNav on mobile, bottom-center on desktop */
-    <div className="fixed bottom-[calc(56px+0.75rem)] md:bottom-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100%-1.5rem)] max-w-3xl">
+    <div
+      ref={containerRef}
+      className="fixed bottom-[calc(56px+0.75rem)] md:bottom-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100%-1.5rem)] max-w-3xl"
+    >
       {/* Glow */}
       <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-violet-500/20 via-fuchsia-400/20 to-yellow/20 animate-glow blur-lg" />
       <div className="pointer-events-none absolute -inset-px rounded-2xl border border-white/8" />
 
       <div className="omni-box relative rounded-2xl bg-ink/92 backdrop-blur-xl overflow-hidden shadow-2xl">
-        {/* Settings panel (above) */}
+        {/* Settings panel — slides in above the top bar */}
         {showSettings && (
           <div className="border-b border-white/6 px-4 py-3 space-y-3 animate-rise">
-            <div className="flex gap-2">
-              {(["720P", "1080P"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setSettings((s) => ({ ...s, resolution: r }))}
-                  className={cn(
-                    "flex-1 rounded-lg py-1.5 text-[12px] font-medium transition-colors",
-                    settings.resolution === r ? "bg-yellow text-ink" : "border border-white/10 text-muted hover:text-paper",
-                  )}
-                >{r}</button>
-              ))}
-            </div>
+            {/* Aspect ratio */}
             <div className="flex gap-1.5 flex-wrap">
               {RATIOS.map((r) => (
                 <button
@@ -183,11 +182,14 @@ export function OmniBox() {
                   onClick={() => setSettings((s) => ({ ...s, ratio: r }))}
                   className={cn(
                     "rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors",
-                    settings.ratio === r ? "bg-yellow text-ink" : "border border-white/10 text-muted hover:text-paper",
+                    settings.ratio === r
+                      ? "bg-yellow text-ink"
+                      : "border border-white/10 text-muted hover:text-paper",
                   )}
                 >{r}</button>
               ))}
             </div>
+            {/* Duration */}
             <div>
               <p className="mb-1.5 text-[11px] text-muted">Duration — {settings.duration}s</p>
               <input
@@ -213,10 +215,12 @@ export function OmniBox() {
               onClick={() => setShowSettings((s) => !s)}
               className={cn(
                 "flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors",
-                showSettings ? "border-yellow/40 text-yellow" : "border-white/10 text-muted hover:text-paper",
+                showSettings
+                  ? "border-yellow/40 text-yellow"
+                  : "border-white/10 text-muted hover:text-paper",
               )}
             >
-              {settings.resolution} <span className="text-white/20">|</span> {settings.ratio} <span className="text-white/20">|</span> {settings.duration}s
+              {settings.ratio} <span className="text-white/20">|</span> {settings.duration}s
               <Settings2 className="h-3 w-3" />
             </button>
           </div>
@@ -263,7 +267,6 @@ export function OmniBox() {
 
         {/* Bottom bar */}
         <div className="flex items-center gap-2 border-t border-white/5 px-3 py-2">
-          {/* Thumbnails + add */}
           <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0">
             {media.map((item) => (
               <div key={item.id} className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
