@@ -255,6 +255,7 @@ export function OmniBox() {
   const durationLocked = remix !== null;
 
   return (
+    <>
     <div
       ref={containerRef}
       className="fixed bottom-[calc(56px+0.75rem)] md:bottom-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100%-1.5rem)] max-w-3xl"
@@ -467,12 +468,11 @@ export function OmniBox() {
       </div>
     </div>
 
-    {/* KOL picker — portal-rendered at z-[21], below OmniBox at z-30 */}
     <KolPicker
       open={showKols}
       selected={selectedKols}
       onToggle={toggleKol}
       onClose={() => setShowKols(false)}
     />
-  );
+  </>;
 }
