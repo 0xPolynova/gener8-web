@@ -67,6 +67,7 @@ export function KolPicker({ open, selected, onToggle, onClose }: KolPickerProps)
           {/* Grid panel — z-[21], centered, above backdrop, below OmniBox */}
           <motion.div
             key="kol-panel"
+            id="kol-picker-panel"
             className="fixed inset-x-0 bottom-[15.5rem] md:bottom-[12.5rem] z-[21] mx-auto w-[calc(100%-2rem)] max-w-3xl px-0"
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

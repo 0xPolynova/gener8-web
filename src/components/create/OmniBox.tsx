@@ -125,6 +125,21 @@ function removeChip(editor: HTMLElement, token: string) {
   editor.querySelectorAll(tokenSelector(token)).forEach((el) => el.remove());
 }
 
+function mentionAtCaret(editor: HTMLElement): { query: string; node: Text; at: number } | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.startContainer)) return null;
+  if (range.startContainer.nodeType !== Node.TEXT_NODE) return null;
+  const node = range.startContainer as Text;
+  const before = (node.textContent ?? "").slice(0, range.startOffset);
+  const at = before.lastIndexOf("@");
+  if (at < 0) return null;
+  const query = before.slice(at + 1);
+  if (/\s/.test(query)) return null;
+  return { query, node, at };
+}
+
 function fillEditor(editor: HTMLElement, text: string, images: Record<string, string | null>) {
   editor.replaceChildren();
   for (const part of text.split(/(@[A-Za-z0-9_]+)/g)) {
@@ -140,6 +155,9 @@ export function OmniBox() {
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const mentionRef = useRef<HTMLDivElement>(null);
+  const kolButtonRef = useRef<HTMLButtonElement>(null);
+  const mentionAnchor = useRef<{ node: Text; at: number; len: number } | null>(null);
   const selectedKolsRef = useRef<string[]>([]);
   const mediaRef = useRef<OmniMedia[]>([]);
 
@@ -150,6 +168,7 @@ export function OmniBox() {
   const [showSettings, setShowSettings] = useState(false);
   const [showKols, setShowKols] = useState(false);
   const [selectedKols, setSelectedKols] = useState<string[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const remaining = eligibility?.remainingToday ?? eligibility?.dailyLimit ?? 0;
@@ -187,6 +206,41 @@ export function OmniBox() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showSettings]);
+
+  const refreshMention = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const hit = mentionAtCaret(editor);
+    if (!hit) {
+      setMentionQuery(null);
+      mentionAnchor.current = null;
+      return;
+    }
+    mentionAnchor.current = { node: hit.node, at: hit.at, len: hit.query.length };
+    setMentionQuery(hit.query);
+  }, []);
+
+  useEffect(() => {
+    if (mentionQuery === null) return;
+    const onDown = (e: MouseEvent) => {
+      if (mentionRef.current?.contains(e.target as Node)) return;
+      setMentionQuery(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [mentionQuery]);
+
+  useEffect(() => {
+    if (!showKols) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (kolButtonRef.current?.contains(target)) return;
+      if (document.getElementById("kol-picker-panel")?.contains(target)) return;
+      setShowKols(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [showKols]);
 
   /* Listen for remix events */
   useEffect(() => {
@@ -264,6 +318,32 @@ export function OmniBox() {
       if (editor) insertChip(editor, token, kol?.avatar ?? null);
     }
     if (editor) setPrompt(serializeEditor(editor));
+  };
+
+  const applyMention = (token: string, image: string | null, kolHandle?: string) => {
+    const editor = editorRef.current;
+    const anchor = mentionAnchor.current;
+    if (editor && anchor?.node.isConnected && anchor.node.textContent?.slice(anchor.at, anchor.at + 1) === "@") {
+      const text = anchor.node.textContent ?? "";
+      const end = Math.min(text.length, anchor.at + 1 + anchor.len);
+      anchor.node.textContent = text.slice(0, anchor.at) + text.slice(end);
+      const range = document.createRange();
+      range.setStart(anchor.node, anchor.at);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+    if (kolHandle && !selectedKolsRef.current.includes(kolHandle)) {
+      setSelectedKols((prev) => (prev.includes(kolHandle) ? prev : [...prev, kolHandle]));
+    }
+    if (editor) {
+      insertChip(editor, token, image);
+      setPrompt(serializeEditor(editor));
+      editor.focus();
+    }
+    setMentionQuery(null);
+    mentionAnchor.current = null;
   };
 
   const handleFiles = useCallback(
@@ -375,6 +455,30 @@ export function OmniBox() {
   };
 
   const durationLocked = remix !== null;
+  const mentionQ = (mentionQuery ?? "").trim().toLowerCase();
+  const mentionAssets = [
+    ...(remix
+      ? [{
+          id: `remix-${remix.id}`,
+          token: `@${remix.label}`,
+          title: remix.title || remix.label,
+          image: mediaUrl(remix.thumbnailUrl),
+        }]
+      : []),
+    ...media.map((item) => ({
+      id: item.id,
+      token: `@${item.label}`,
+      title: item.label,
+      image: item.localUrl,
+    })),
+  ].filter((item) =>
+    !mentionQ || item.title.toLowerCase().includes(mentionQ) || item.token.toLowerCase().includes(mentionQ),
+  );
+  const mentionKols = KOLS.filter((kol) =>
+    !mentionQ ||
+    kol.name.toLowerCase().includes(mentionQ) ||
+    kol.handle.toLowerCase().includes(mentionQ),
+  );
 
   return (
     <>
@@ -382,6 +486,63 @@ export function OmniBox() {
       ref={containerRef}
       className="fixed bottom-[calc(56px+0.75rem)] md:bottom-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100%-1.5rem)] max-w-3xl"
     >
+      {mentionQuery !== null && (
+        <div
+          ref={mentionRef}
+          className="absolute bottom-full left-0 right-0 z-40 mb-2 overflow-hidden rounded-2xl border border-white/10 bg-[#121212]/95 shadow-[0_16px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+        >
+          <div className="border-b border-white/8 px-3 py-2">
+            <input
+              value={mentionQuery}
+              onChange={(e) => setMentionQuery(e.target.value)}
+              placeholder="Search assets or KOLs"
+              className="w-full bg-transparent text-[14px] text-white placeholder:text-white/35 focus:outline-none"
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-white/35">Assets</p>
+            {mentionAssets.length === 0 && (
+              <p className="px-3 py-1.5 text-[13px] text-white/40">Nothing loaded matches</p>
+            )}
+            {mentionAssets.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyMention(item.token, item.image)}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-white/6"
+              >
+                {item.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.image} alt="" className="h-7 w-7 rounded-md object-cover" />
+                ) : (
+                  <span className="h-7 w-7 rounded-md bg-white/10" />
+                )}
+                <span className="truncate text-[13px] text-white">{item.token}</span>
+              </button>
+            ))}
+            <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-white/35">KOLs</p>
+            {mentionKols.length === 0 && (
+              <p className="px-3 py-1.5 text-[13px] text-white/40">No KOLs match</p>
+            )}
+            {mentionKols.map((kol) => (
+              <button
+                key={kol.id}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyMention(`@${kol.handle}`, kol.avatar, kol.handle)}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-white/6"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={kol.avatar} alt="" className="h-7 w-7 rounded-full object-cover" />
+                <span className="truncate text-[13px] text-white">{kol.name}</span>
+                <span className="ml-auto truncate text-[12px] text-white/40">@{kol.handle}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Glow */}
       <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-violet-500/20 via-fuchsia-400/20 to-yellow/20 animate-glow blur-lg" />
       <div className="pointer-events-none absolute -inset-px rounded-2xl border border-white/8" />
@@ -490,8 +651,15 @@ export function OmniBox() {
             suppressContentEditableWarning
             role="textbox"
             aria-multiline="true"
-            onInput={syncEditor}
+            onInput={() => {
+              syncEditor();
+              refreshMention();
+            }}
             onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setMentionQuery(null);
+                return;
+              }
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 handleSubmit();
@@ -569,7 +737,8 @@ export function OmniBox() {
             </button>
             {/* KOLs button */}
             <button
-              onClick={() => setShowKols(true)}
+              ref={kolButtonRef}
+              onClick={() => setShowKols((open) => !open)}
               disabled={!session || submitting}
               className={cn(
                 "flex h-8 items-center gap-1 flex-shrink-0 rounded-lg border px-2 text-[12px] font-medium transition-colors disabled:opacity-40",

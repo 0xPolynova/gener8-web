@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Heart, Share2, Shuffle } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";

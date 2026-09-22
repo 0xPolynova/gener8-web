@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Copy, LogOut, UserRound, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +27,7 @@ export function WalletButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, setTick] = useState(0);
@@ -36,6 +37,17 @@ export function WalletButton() {
     const timer = window.setInterval(() => setTick((n) => n + 1), 500);
     return () => window.clearInterval(timer);
   }, [open]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menu]);
 
   const busy = connecting || pending;
 
@@ -66,7 +78,7 @@ export function WalletButton() {
 
   if (walletAddress) {
     return (
-      <div className="relative">
+      <div className="relative" ref={menuRef}>
         <button
           type="button"
           onClick={() => setMenu((v) => !v)}
@@ -86,12 +98,6 @@ export function WalletButton() {
           <ChevronDown className="h-3.5 w-3.5 text-muted" />
         </button>
         {menu && (
-          <>
-            <button
-              className="fixed inset-0 z-50 cursor-default"
-              onClick={() => setMenu(false)}
-              aria-label="Close menu"
-            />
             <div className="absolute right-0 z-60 mt-2 w-52 overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
               {user?.username && (
                 <button
@@ -127,7 +133,6 @@ export function WalletButton() {
                 Disconnect
               </button>
             </div>
-          </>
         )}
       </div>
     );
