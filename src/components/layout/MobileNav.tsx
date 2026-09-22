@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, PlusSquare, Clapperboard, Coins } from "lucide-react";
+import { Compass, Clapperboard, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/discover", label: "Discover", icon: Compass },
-  { href: "/create", label: "Create", icon: PlusSquare },
   { href: "/creations", label: "Creations", icon: Clapperboard },
   { href: "/gener8", label: "$GENER8", icon: Coins },
 ];
@@ -17,7 +16,7 @@ export function MobileNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-      <div className="grid h-14 grid-cols-4">
+      <div className="grid h-14 grid-cols-3">
         {ITEMS.map((item) => {
           const active = pathname.startsWith(item.href);
           const Icon = item.icon;

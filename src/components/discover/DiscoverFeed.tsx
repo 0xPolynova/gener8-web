@@ -6,7 +6,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { VideoCardSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAppState } from "@/components/providers/AppState";
-import type { GridSpan, VideoWithCreator } from "@/types";
+import { OmniBox } from "@/components/create/OmniBox";
+import type { GridSpan, GenerationJob, Video, VideoWithCreator } from "@/types";
 import { apiFetch } from "@/lib/api";
 
 const ORDER_KEY = "gener8_discover_order";
@@ -52,6 +53,22 @@ export function DiscoverFeed() {
   const [videos, setVideos] = useState<VideoWithCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
+
+  const onJobCreated = (_job: GenerationJob, video: Video) => {
+    const stub = {
+      ...video,
+      creator: {
+        id: session?.userId ?? "",
+        username: session?.username ?? "",
+        displayName: session?.displayName ?? "",
+        avatarPalette: { from: "#050505", via: "#16120a", to: "#2a2208", accent: "#FBE418" },
+        avatarUrl: null,
+        xHandle: null,
+        walletAddress: session?.walletAddress ?? null,
+      },
+    } as VideoWithCreator;
+    setVideos((prev) => [stub, ...prev]);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +117,8 @@ export function DiscoverFeed() {
 
   return (
     <div>
+      <OmniBox onJobCreated={onJobCreated} />
+
       <div className="mb-6">
         <h1 className="text-[28px] font-semibold tracking-tight text-paper">
           Discover
@@ -131,9 +150,7 @@ export function DiscoverFeed() {
         <EmptyState
           className="mt-6"
           title="No creations found."
-          body="Nothing in the feed yet — be the first."
-          actionLabel="Create a video"
-          actionHref="/create"
+          body="Nothing in the feed yet — write a prompt above to be the first."
         />
       )}
     </div>
