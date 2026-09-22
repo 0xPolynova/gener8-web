@@ -166,7 +166,7 @@ export function VideoCard({
                   e.stopPropagation();
                   onRemix(video);
                 }}
-                className="pointer-events-none flex shrink-0 items-center gap-1 rounded-full bg-yellow px-2.5 py-1 text-[11px] font-bold text-ink opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-yellow-bright active:scale-95"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-yellow px-2.5 py-1 text-[11px] font-bold text-ink hover:bg-yellow-bright active:scale-95 transition-all"
               >
                 <Shuffle className="h-2.5 w-2.5" />
                 Remix

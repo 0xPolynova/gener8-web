@@ -37,14 +37,16 @@
 
 html {
   background: var(--ink);
-  color: var(--paper);
+  color: #ffffff;
   color-scheme: dark;
+  font-size: 16.9px;
 }
 
 body {
   background: var(--ink);
-  color: var(--paper);
+  color: #ffffff;
   font-family: var(--font-geist-sans), Inter, system-ui, sans-serif;
+  font-size: 16.9px; /* ~30% larger than the default 13px design base */
   min-height: 100%;
   -webkit-font-smoothing: antialiased;
 }
