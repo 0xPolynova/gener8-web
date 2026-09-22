@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { VideoCardSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAppState } from "@/components/providers/AppState";
+import { promptPreview } from "@/lib/format";
 import type { GridSpan, VideoWithCreator } from "@/types";
 import { apiFetch } from "@/lib/api";
 
@@ -98,6 +99,19 @@ export function DiscoverFeed() {
     toast("Link copied", "success");
   };
 
+  const onRemix = (video: VideoWithCreator) => {
+    window.dispatchEvent(
+      new CustomEvent("omni:remix", {
+        detail: {
+          videoUrl: video.videoUrl,
+          duration: video.duration,
+          title: video.title || promptPreview(video.prompt, 60),
+          id: video.id,
+        },
+      }),
+    );
+  };
+
   return (
     <div>
       <div className="mb-6">
@@ -120,6 +134,7 @@ export function DiscoverFeed() {
               video={{ ...video, gridSpan: discoverSpan(video.gridSpan) }}
               onLike={onLike}
               onShare={onShare}
+              onRemix={onRemix}
               muted={muted}
               onToggleMute={() => setMuted((on) => !on)}
               showMeta={false}

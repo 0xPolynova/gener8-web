@@ -1,11 +1,11 @@
 "use client";
 
-import { Heart, Share2, Maximize2, Volume2, VolumeX } from "lucide-react";
+import { Heart, Share2, Maximize2, Volume2, VolumeX, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { VideoThumb } from "@/components/video/VideoThumb";
-import { formatCount, formatRelativeTime, promptPreview } from "@/lib/format";
+import { abbreviateAddress, formatCount, formatRelativeTime, promptPreview } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { VideoWithCreator } from "@/types";
 import { XLink } from "@/components/brand/XLink";
@@ -27,6 +27,7 @@ export function VideoCard({
   video,
   onLike,
   onShare,
+  onRemix,
   muted = true,
   onToggleMute,
   showMeta = true,
@@ -35,6 +36,7 @@ export function VideoCard({
   video: VideoWithCreator;
   onLike?: (id: string) => void;
   onShare?: (id: string) => void;
+  onRemix?: (video: VideoWithCreator) => void;
   muted?: boolean;
   onToggleMute?: () => void;
   showMeta?: boolean;
@@ -86,6 +88,10 @@ export function VideoCard({
         {showMeta && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         )}
+        {/* Always-on overlay when showMeta=false (discover grid) */}
+        {!showMeta && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
+        )}
         <div className="pointer-events-none absolute right-2 top-2 flex gap-1.5 opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
           {onToggleMute && (
             <QuickAction
@@ -132,6 +138,40 @@ export function VideoCard({
             <p className="line-clamp-2 text-[13px] font-medium leading-snug text-paper">
               {video.title || promptPreview(video.prompt, 80)}
             </p>
+          </div>
+        )}
+        {/* Discover overlay: creator info (bottom-left) + Remix button (bottom-right) */}
+        {!showMeta && (
+          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between px-2.5 py-2">
+            {/* Creator: wallet + X */}
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-medium text-paper/90 leading-none">
+                {video.creator.walletAddress
+                  ? abbreviateAddress(video.creator.walletAddress)
+                  : video.creator.username}
+              </p>
+              {video.creator.xHandle && (
+                <p className="mt-0.5 truncate text-[10px] text-white/50 leading-none">
+                  @{video.creator.xHandle}
+                </p>
+              )}
+            </div>
+            {/* Remix button — visible on hover */}
+            {onRemix && (
+              <button
+                type="button"
+                aria-label="Remix this video"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRemix(video);
+                }}
+                className="pointer-events-none flex shrink-0 items-center gap-1 rounded-full bg-yellow px-2.5 py-1 text-[11px] font-bold text-ink opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-yellow-bright active:scale-95"
+              >
+                <Shuffle className="h-2.5 w-2.5" />
+                Remix
+              </button>
+            )}
           </div>
         )}
       </Link>
