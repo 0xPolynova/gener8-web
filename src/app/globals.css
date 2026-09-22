@@ -59,6 +59,13 @@ body {
   outline-offset: 2px;
 }
 
+/* OmniBox: never show focus rings on any child element */
+.omni-box *:focus,
+.omni-box *:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

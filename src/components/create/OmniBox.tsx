@@ -160,7 +160,7 @@ export function OmniBox() {
       <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-violet-500/20 via-fuchsia-400/20 to-yellow/20 animate-glow blur-lg" />
       <div className="pointer-events-none absolute -inset-px rounded-2xl border border-white/8" />
 
-      <div className="relative rounded-2xl bg-ink/92 backdrop-blur-xl overflow-hidden shadow-2xl">
+      <div className="omni-box relative rounded-2xl bg-ink/92 backdrop-blur-xl overflow-hidden shadow-2xl">
         {/* Settings panel (above) */}
         {showSettings && (
           <div className="border-b border-white/6 px-4 py-3 space-y-3 animate-rise">
@@ -193,7 +193,7 @@ export function OmniBox() {
               <input
                 type="range" min={2} max={30} step={1} value={settings.duration}
                 onChange={(e) => setSettings((s) => ({ ...s, duration: Number(e.target.value) }))}
-                className="w-full accent-yellow"
+                className="w-full accent-yellow focus:outline-none"
               />
             </div>
           </div>
@@ -257,7 +257,7 @@ export function OmniBox() {
             placeholder={session ? "Describe what you want to generate… (⌘↵ to send)" : "Connect your wallet to start creating"}
             disabled={!session || submitting}
             rows={2}
-            className="w-full resize-none bg-transparent text-[13px] text-paper placeholder:text-muted/50 focus:outline-none disabled:opacity-40"
+            className="w-full resize-none border-0 bg-transparent text-[13px] text-paper placeholder:text-muted/50 focus:outline-none focus:ring-0 disabled:opacity-40"
           />
         </div>
 
