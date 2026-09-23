@@ -148,7 +148,13 @@ function frameFromFile(file: File): Promise<string | null> {
 
 function remixTemplate(videoLabel: string, extras: string[]) {
   const swaps = extras.length ? ` ${extras.join(" ")}` : "";
-  return `@${videoLabel} is the video we are recreating exactly.\n\nWe want to swap out the characters for:${swaps}`;
+  return (
+    `@${videoLabel} replace the characters in this video with these characters.${swaps} ` +
+    `This video must be exactly like @${videoLabel} — do not change anything but the characters, ` +
+    `keeping their lipsync and motion. The framing, cutaways, camera angles, and video composition ` +
+    `must stay exactly the same. Never swap character placement; all characters stay in the same ` +
+    `position throughout the entire video.`
+  );
 }
 
 function tokenSelector(token: string) {
