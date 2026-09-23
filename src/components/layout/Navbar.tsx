@@ -17,9 +17,9 @@ const LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const { walletAddress } = useAppState();
-  const links = isAdminWallet(walletAddress)
-    ? [...LINKS, { href: "/admin", label: "Admin" }]
-    : LINKS;
+  const links = (walletAddress ? LINKS : LINKS.filter((link) => link.href !== "/creations")).concat(
+    isAdminWallet(walletAddress) ? [{ href: "/admin", label: "Admin" }] : [],
+  );
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-ink/90 backdrop-blur-md">

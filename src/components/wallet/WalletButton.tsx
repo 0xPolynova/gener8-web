@@ -33,6 +33,12 @@ export function WalletButton() {
   const [, setTick] = useState(0);
 
   useEffect(() => {
+    const openConnect = () => setOpen(true);
+    window.addEventListener("gener8:connect", openConnect);
+    return () => window.removeEventListener("gener8:connect", openConnect);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     const timer = window.setInterval(() => setTick((n) => n + 1), 500);
     return () => window.clearInterval(timer);

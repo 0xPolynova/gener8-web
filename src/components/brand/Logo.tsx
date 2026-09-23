@@ -12,7 +12,7 @@ export function Logo({
 }) {
   return (
     <Link
-      href="/"
+      href="/discover"
       className={cn(
         "flex items-center gap-2.5 no-underline",
         className,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, Clapperboard, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppState } from "@/components/providers/AppState";
 
 const ITEMS = [
   { href: "/discover", label: "Discover", icon: Compass },
@@ -13,11 +14,13 @@ const ITEMS = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { walletAddress } = useAppState();
+  const items = walletAddress ? ITEMS : ITEMS.filter((item) => item.href !== "/creations");
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-      <div className="grid h-14 grid-cols-3">
-        {ITEMS.map((item) => {
+      <div className={`grid h-14 ${items.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+        {items.map((item) => {
           const active = pathname.startsWith(item.href);
           const Icon = item.icon;
           return (

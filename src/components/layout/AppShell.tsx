@@ -13,7 +13,8 @@ function hideChat(pathname: string) {
     pathname === "/creations" ||
     pathname.startsWith("/profile") ||
     pathname === "/gener8" ||
-    pathname.startsWith("/gener8/")
+    pathname.startsWith("/gener8/") ||
+    pathname.startsWith("/video")
   );
 }
 
@@ -21,14 +22,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   if (pathname === "/") return <>{children}</>;
   const chat = !hideChat(pathname);
+  const fullBleed = pathname === "/discover" || pathname === "/creations";
 
   return (
     <div className="flex min-h-full flex-col bg-ink">
       <Navbar />
       <main
-        className={`mx-auto w-full max-w-[1440px] flex-1 px-4 pt-6 md:px-6 ${
-          chat ? "pb-[220px] md:pb-[160px]" : "pb-24"
-        }`}
+        className={`w-full flex-1 ${
+          fullBleed ? "pt-3" : "mx-auto max-w-[1440px] px-4 pt-6 md:px-6"
+        } ${chat ? "pb-[200px] md:pb-[150px]" : "pb-24"}`}
       >
         {children}
       </main>

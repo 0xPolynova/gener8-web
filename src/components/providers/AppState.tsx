@@ -15,6 +15,7 @@ interface AppContextValue {
   session: Session | null;
   user: User | null;
   eligibility: Eligibility | null;
+  tokenMint: string | null;
   loading: boolean;
   connecting: boolean;
   needsOnboarding: boolean;
@@ -62,6 +63,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [eligibility, setEligibility] = useState<Eligibility | null>(null);
+  const [tokenMint, setTokenMint] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const refreshGen = useRef(0);
@@ -103,6 +105,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setSession(nextSession);
       setUser(nextUser);
       setEligibility(tokenJson.eligibility ?? FALLBACK_ELIGIBILITY);
+      setTokenMint(typeof tokenJson.mint === "string" && tokenJson.mint ? tokenJson.mint : null);
     } catch {
       if (gen !== refreshGen.current) return;
       setEligibility(FALLBACK_ELIGIBILITY);
@@ -174,6 +177,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       session,
       user,
       eligibility,
+      tokenMint,
       loading,
       connecting,
       needsOnboarding,
@@ -187,6 +191,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       session,
       user,
       eligibility,
+      tokenMint,
       loading,
       connecting,
       needsOnboarding,

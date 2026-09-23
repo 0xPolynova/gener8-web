@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Tabs } from "@/components/ui/Tabs";
+import { Modal } from "@/components/ui/Modal";
+import { BrandMark } from "@/components/brand/Logo";
+import { cn } from "@/lib/utils";
+import { aspectWeight, packColumns, useColumnCount } from "@/components/discover/masonry";
 import { GeneratingPoster } from "@/components/creations/GeneratingPoster";
 import { VideoThumb } from "@/components/video/VideoThumb";
 import { useToast } from "@/components/ui/Toast";
@@ -27,6 +30,7 @@ const TABS: { id: CreationsTab; label: string }[] = [
   { id: "published", label: "Published" },
   { id: "private", label: "Private" },
   { id: "generating", label: "Generating" },
+  { id: "archived", label: "Archived" },
 ];
 
 export function CreationsDashboard() {
@@ -36,6 +40,8 @@ export function CreationsDashboard() {
   const [tab, setTab] = useState<CreationsTab>("all");
   const [videos, setVideos] = useState<VideoWithCreator[]>([]);
   const [fetching, setFetching] = useState(false);
+  const [pendingArchive, setPendingArchive] = useState<VideoWithCreator | null>(null);
+  const columns = useColumnCount();
 
   useEffect(() => {
     if (!session) return;
@@ -97,11 +103,31 @@ export function CreationsDashboard() {
 
   return (
     <div>
+      <div className="px-3">
       <Header />
-      <div className="mt-5">
-        <Tabs value={tab} onChange={setTab} items={TABS} />
+      <div className="mt-5 flex flex-wrap gap-2.5">
+        {TABS.map((item) => {
+          const active = item.id === tab;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={cn(
+                "inline-flex items-center gap-2.5 rounded-xl border px-4 py-3 transition-colors",
+                active
+                  ? "border-white/40 bg-white/10"
+                  : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/8",
+              )}
+            >
+              <BrandMark size={26} />
+              <span className="text-[18px] font-bold text-white">{item.label}</span>
+            </button>
+          );
+        })}
       </div>
-      {fetching && <p className="mt-6 text-sm text-muted">Loading…</p>}
+      </div>
+      {fetching && <p className="mt-6 px-3 text-sm text-muted">Loading…</p>}
       {!fetching && videos.length === 0 && (
         <EmptyState
           className="mt-6"
@@ -111,15 +137,18 @@ export function CreationsDashboard() {
           actionHref="/create"
         />
       )}
-      <div className="mt-6 grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
-        {videos.map((video, index) => (
+      <div className="mt-4 flex items-start gap-2">
+        {packColumns(videos, columns, (video) => aspectWeight(video.aspectRatio)).map(
+          (column, columnIndex) => (
+          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-2">
+        {column.map((video, index) => (
           <article
             key={video.id}
             className="flex flex-col overflow-hidden rounded-[12px] border border-line bg-surface"
           >
             <Link
               href={`/video/${video.id}`}
-              className="relative block h-[220px] overflow-hidden bg-ink"
+              className={`relative block w-full overflow-hidden bg-ink ${tileAspect(video.aspectRatio)}`}
             >
               {isGenerating(video.status) ? (
                 <GeneratingPoster />
@@ -209,28 +238,50 @@ export function CreationsDashboard() {
                     </Button>
                   </a>
                 )}
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() =>
-                    void action(video.id, async () => {
-                      const res = await apiFetch(`/api/videos/${video.id}`, {
-                        method: "DELETE",
-                      });
-                      if (!res.ok) throw new Error();
-                      setVideos((prev) => prev.filter((v) => v.id !== video.id));
-                      toast("Deleted", "success");
-                    })
-                  }
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </Button>
+                {tab !== "archived" && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setPendingArchive(video)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                )}
               </div>
             </div>
           </article>
         ))}
+          </div>
+        ))}
       </div>
+      <Modal open={pendingArchive !== null} onClose={() => setPendingArchive(null)}>
+        <h2 className="text-lg font-semibold text-white">Archive this video?</h2>
+        <p className="mt-2 text-sm text-muted">
+          It leaves Discover and your profile. You can still open it under Archived.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPendingArchive(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              const video = pendingArchive;
+              if (!video) return;
+              setPendingArchive(null);
+              void action(video.id, async () => {
+                const res = await apiFetch(`/api/videos/${video.id}`, { method: "DELETE" });
+                if (!res.ok) throw new Error();
+                setVideos((prev) => prev.filter((item) => item.id !== video.id));
+              });
+            }}
+          >
+            Archive
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -244,6 +295,14 @@ function Header() {
       </p>
     </div>
   );
+}
+
+function tileAspect(ratio: string) {
+  if (ratio === "9:16") return "aspect-[9/16]";
+  if (ratio === "1:1") return "aspect-square";
+  if (ratio === "3:4") return "aspect-[3/4]";
+  if (ratio === "4:3") return "aspect-[4/3]";
+  return "aspect-video";
 }
 
 function isGenerating(status: string) {

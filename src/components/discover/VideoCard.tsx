@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { VideoThumb } from "@/components/video/VideoThumb";
-import { abbreviateAddress, formatCount, formatRelativeTime, promptPreview } from "@/lib/format";
+import { formatCount, formatRelativeTime, promptPreview } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { VideoWithCreator } from "@/types";
 import { XLink } from "@/components/brand/XLink";
@@ -28,6 +28,7 @@ export function VideoCard({
   onLike,
   onShare,
   onRemix,
+  remixLabel = "Remix",
   muted = true,
   onToggleMute,
   showMeta = true,
@@ -37,6 +38,7 @@ export function VideoCard({
   onLike?: (id: string) => void;
   onShare?: (id: string) => void;
   onRemix?: (video: VideoWithCreator) => void;
+  remixLabel?: string;
   muted?: boolean;
   onToggleMute?: () => void;
   showMeta?: boolean;
@@ -56,8 +58,8 @@ export function VideoCard({
   return (
     <article
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface transition-transform duration-300 hover:-translate-y-0.5 hover:border-[#333]",
-        spanClass[span],
+        "group relative flex flex-col overflow-hidden rounded-[12px] border border-line bg-surface transition-transform duration-300 hover:-translate-y-0.5 hover:border-[#333]",
+        showMeta ? cn("h-full", spanClass[span]) : "",
       )}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -66,16 +68,11 @@ export function VideoCard({
         href={`/video/${video.id}`}
         aria-label={video.title || promptPreview(video.prompt, 80)}
         className={cn(
-          "relative flex min-h-0 overflow-hidden bg-ink",
-          showMeta ? mediaAspect : "h-full flex-1 items-center justify-center",
+          "relative block w-full overflow-hidden bg-ink",
+          showMeta ? mediaAspect : aspectClass[video.aspectRatio] ?? "aspect-video",
         )}
       >
-        <div
-          className={cn(
-            "relative w-full overflow-hidden",
-            showMeta ? "h-full" : mediaAspect,
-          )}
-        >
+        <div className="absolute inset-0">
           <VideoThumb
             videoUrl={video.videoUrl}
             thumbnailUrl={video.thumbnailUrl}
@@ -140,41 +137,39 @@ export function VideoCard({
             </p>
           </div>
         )}
-        {/* Discover overlay: creator info (bottom-left) + Remix button (bottom-right) */}
-        {!showMeta && (
-          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between px-2.5 py-2">
-            {/* Creator: wallet + X */}
-            <div className="min-w-0">
-              <p className="truncate text-[11px] font-medium text-paper/90 leading-none">
-                {video.creator.walletAddress
-                  ? abbreviateAddress(video.creator.walletAddress)
-                  : video.creator.username}
-              </p>
+      </Link>
+      {!showMeta && (
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between gap-2 px-3 py-2.5">
+          <div className="pointer-events-auto min-w-0">
+            <p className="truncate text-[16px] font-semibold leading-none text-white">
+              {video.creator.displayName || video.creator.username}
+            </p>
+            <div className="mt-1 flex items-center gap-1.5">
               {video.creator.xHandle && (
-                <p className="mt-0.5 truncate text-[10px] text-white/50 leading-none">
+                <p className="truncate text-[13px] leading-none text-white/70">
                   @{video.creator.xHandle}
                 </p>
               )}
+              <XLink handle={video.creator.xHandle} compact className="shrink-0 text-white/80" />
             </div>
-            {/* Remix button — visible on hover */}
-            {onRemix && (
-              <button
-                type="button"
-                aria-label="Remix this video"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onRemix(video);
-                }}
-                className="flex shrink-0 items-center gap-1 rounded-full bg-yellow px-2.5 py-1 text-[11px] font-bold text-ink hover:bg-yellow-bright active:scale-95 transition-all"
-              >
-                <Shuffle className="h-2.5 w-2.5" />
-                Remix
-              </button>
-            )}
           </div>
-        )}
-      </Link>
+          {onRemix && (
+            <button
+              type="button"
+              aria-label={remixLabel}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemix(video);
+              }}
+              className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full bg-yellow px-3 py-1 text-[16.5px] font-bold leading-none text-ink transition-all hover:bg-yellow-bright active:scale-95"
+            >
+              <Shuffle className="h-4 w-4" />
+              {remixLabel}
+            </button>
+          )}
+        </div>
+      )}
       {showMeta && (
         <div className="flex items-center gap-2.5 px-3 py-2.5">
           <Link href={`/profile/${video.creator.username}`} className="shrink-0">

@@ -11,6 +11,8 @@ import { BrandMark } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import type { DiscoverFilter, GridSpan, VideoWithCreator } from "@/types";
 import { apiFetch } from "@/lib/api";
+import { aspectWeight, packColumns, useColumnCount } from "./masonry";
+import { HoldGate } from "@/components/token/HoldGate";
 
 const ORDER_KEY = "gener8_discover_order";
 
@@ -62,11 +64,13 @@ const FILTERS: { id: DiscoverFilter; label: string }[] = [
 
 export function DiscoverFeed() {
   const { toast } = useToast();
-  const { session } = useAppState();
+  const { session, walletAddress, eligibility, tokenMint } = useAppState();
+  const [gateOpen, setGateOpen] = useState(false);
   const [videos, setVideos] = useState<VideoWithCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
   const [filter, setFilter] = useState<DiscoverFilter>("trending");
+  const columns = useColumnCount();
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +118,17 @@ export function DiscoverFeed() {
   };
 
   const onRemix = (video: VideoWithCreator) => {
+    if (!walletAddress) {
+      window.dispatchEvent(new Event("gener8:connect"));
+      return;
+    }
+    const holds =
+      Boolean(session) &&
+      (eligibility?.state === "eligible" || eligibility?.state === "limit_reached");
+    if (!holds) {
+      setGateOpen(true);
+      return;
+    }
     window.dispatchEvent(
       new CustomEvent("omni:remix", {
         detail: {
@@ -131,7 +146,7 @@ export function DiscoverFeed() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap gap-2.5">
+      <div className="mb-3 flex flex-wrap gap-2.5 px-3">
           {FILTERS.map((item) => {
             const active = item.id === filter;
             return (
@@ -152,25 +167,36 @@ export function DiscoverFeed() {
             );
           })}
         </div>
-      <div className="grid grid-cols-2 items-stretch gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:auto-rows-[220px]">
-        {loading &&
-          Array.from({ length: 8 }).map((_, i) => (
-            <VideoCardSkeleton key={i} tall={i % 3 === 1} showMeta={false} />
-          ))}
-        {!loading &&
-          videos.map((video, index) => (
-            <VideoCard
-              key={video.id}
-              video={{ ...video, gridSpan: discoverSpan(video.gridSpan) }}
-              onLike={onLike}
-              onShare={onShare}
-              onRemix={onRemix}
-              muted={muted}
-              onToggleMute={() => setMuted((on) => !on)}
-              showMeta={false}
-              priority={index < 4}
-            />
-          ))}
+      <div className="flex items-start gap-2">
+        {(loading
+          ? packColumns(
+              Array.from({ length: 8 }, (_, i) => i),
+              columns,
+              (i) => (i % 3 === 1 ? 16 / 9 : 9 / 16),
+            )
+          : packColumns(videos, columns, (video) => aspectWeight(video.aspectRatio))
+        ).map((column, columnIndex) => (
+          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-2">
+            {loading
+              ? column.map((i) => (
+                  <VideoCardSkeleton key={i as number} tall={(i as number) % 3 === 1} showMeta={false} />
+                ))
+              : (column as VideoWithCreator[]).map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={{ ...video, gridSpan: discoverSpan(video.gridSpan) }}
+                    onLike={onLike}
+                    onShare={onShare}
+                    onRemix={onRemix}
+                    remixLabel={walletAddress ? "Remix" : "Connect wallet"}
+                    muted={muted}
+                    onToggleMute={() => setMuted((on) => !on)}
+                    showMeta={false}
+                    priority={videos.indexOf(video) < 4}
+                  />
+                ))}
+          </div>
+        ))}
       </div>
       {!loading && videos.length === 0 && (
         <EmptyState
@@ -179,6 +205,7 @@ export function DiscoverFeed() {
           body="Nothing in the feed yet — write a prompt above to be the first."
         />
       )}
+      <HoldGate open={gateOpen} onClose={() => setGateOpen(false)} mint={tokenMint} />
     </div>
   );
 }
