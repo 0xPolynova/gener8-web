@@ -49,10 +49,11 @@ export function VideoThumb({
   const [capturedStill, setCapturedStill] = useState<string | null>(() =>
     readCachedStill(videoUrl),
   );
+  const [stillFailed, setStillFailed] = useState(false);
 
   const playable = mediaUrl(videoUrl);
   const hlsSource = isHlsUrl(playable);
-  const still = stillFromVideo(videoUrl, thumbnailUrl) ?? capturedStill;
+  const still = stillFailed ? capturedStill : stillFromVideo(videoUrl, thumbnailUrl) ?? capturedStill;
   const mountVideo =
     Boolean(playable) && (playing || warmed || (inView && !still));
   const live = playing && playbackReady;
@@ -171,6 +172,7 @@ export function VideoThumb({
             "absolute inset-0 h-full w-full object-cover",
             live ? "opacity-0" : "opacity-100",
           )}
+          onError={() => setStillFailed(true)}
         />
       )}
       {mountVideo && (

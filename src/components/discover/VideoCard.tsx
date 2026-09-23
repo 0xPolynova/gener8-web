@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { GeneratingPoster } from "@/components/creations/GeneratingPoster";
 import { VideoThumb } from "@/components/video/VideoThumb";
-import { mediaUrl } from "@/lib/api";
+import { apiUrl, mediaUrl } from "@/lib/api";
 import { formatCount, formatRelativeTime, promptPreview } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { VideoWithCreator } from "@/types";
@@ -306,11 +306,11 @@ function IconButton({
 }
 
 async function downloadVideo(video: VideoWithCreator) {
-  const href = mediaUrl(video.videoUrl);
-  if (!href) return;
   const name = `${(video.title || "gener8").replace(/[^\w\- ]+/g, "").trim() || "gener8"}.mp4`;
+  const branded = apiUrl(`/api/videos/${video.id}/download`);
+  const raw = mediaUrl(video.videoUrl);
   try {
-    const res = await fetch(href);
+    const res = await fetch(branded);
     if (!res.ok) throw new Error("download failed");
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
@@ -320,8 +320,9 @@ async function downloadVideo(video: VideoWithCreator) {
     anchor.click();
     URL.revokeObjectURL(objectUrl);
   } catch {
+    if (!raw) return;
     const anchor = document.createElement("a");
-    anchor.href = href;
+    anchor.href = raw;
     anchor.download = name;
     anchor.target = "_blank";
     anchor.rel = "noreferrer";
