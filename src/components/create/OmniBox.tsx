@@ -2,7 +2,8 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { X, Plus, Sparkles, Settings2, Shuffle, Users } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { X, Plus, Sparkles, Settings2, Users } from "lucide-react";
 import { apiFetch, mediaUrl } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
 import { useToast } from "@/components/ui/Toast";
@@ -40,8 +41,14 @@ const RATIOS: OmniSettings["ratio"][] = ["16:9", "4:3", "1:1", "3:4", "9:16"];
 let imgSeq = 0;
 let vidSeq = 0;
 
+const REMIX_LABEL = "Video1";
+let remixReserved = false;
+
 function nextLabel(type: "image" | "video") {
-  return type === "image" ? `Image${++imgSeq}` : `Video${++vidSeq}`;
+  if (type === "image") return `Image${++imgSeq}`;
+  let label = `Video${++vidSeq}`;
+  while (remixReserved && label === REMIX_LABEL) label = `Video${++vidSeq}`;
+  return label;
 }
 
 function frameFromFile(file: File): Promise<string | null> {
@@ -332,7 +339,8 @@ export function OmniBox() {
         prompt?: string;
         id: string;
       };
-      const label = nextLabel("video");
+      const label = REMIX_LABEL;
+      remixReserved = true;
       const ratio = RATIOS.includes(detail.aspectRatio as OmniSettings["ratio"])
         ? (detail.aspectRatio as OmniSettings["ratio"])
         : "16:9";
@@ -371,6 +379,7 @@ export function OmniBox() {
   }, []);
 
   const clearRemix = () => {
+    remixReserved = false;
     setRemix(null);
     const editor = editorRef.current;
     if (!editor) {
@@ -592,6 +601,7 @@ export function OmniBox() {
       setSelectedKols([]);
       imgSeq = 0;
       vidSeq = 0;
+      remixReserved = false;
     } catch (err) {
       toast(err instanceof Error ? err.message : "Couldn't start generation.", "error");
     } finally {
@@ -629,7 +639,7 @@ export function OmniBox() {
     <>
     <div
       ref={containerRef}
-      className="fixed bottom-[calc(56px+0.75rem)] md:bottom-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100%-1.5rem)] max-w-3xl"
+      className="fixed bottom-[calc(56px+0.35rem)] md:bottom-2 left-1/2 z-30 w-[calc(100%-0.5rem)] max-w-3xl -translate-x-1/2"
     >
       {mentionQuery !== null && (
         <div
@@ -728,70 +738,37 @@ export function OmniBox() {
           </div>
         )}
 
-        {/* Top bar */}
-        <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setShowSettings((s) => !s)}
-              className={cn(
-                "flex items-center gap-1 rounded-lg border px-2 py-1 text-[12px] font-medium transition-colors",
-                showSettings ? "border-yellow/40 text-yellow" : "border-white/10 text-white/60 hover:text-white",
-              )}
-            >
-              {settings.ratio} <span className="text-white/20">|</span> {settings.duration}s
-              <Settings2 className="h-3 w-3" />
-            </button>
+        <div className="flex items-stretch gap-1.5 px-1.5 pt-1.5">
+          <div className="flex min-w-0 flex-1 items-center rounded-xl bg-white/[0.06] px-2.5 py-2">
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value.slice(0, 80))}
+              placeholder="Video name"
+              disabled={!session || submitting}
+              className="w-full bg-transparent text-[16px] font-semibold text-white outline-none placeholder:text-white/55 disabled:opacity-40"
+            />
           </div>
+          <button
+            onClick={() => setShowSettings((s) => !s)}
+            className={cn(
+              "flex shrink-0 items-center gap-1 rounded-xl border px-3 text-[12px] font-medium transition-colors",
+              showSettings ? "border-yellow/40 text-yellow" : "border-white/15 text-white/70 hover:text-white",
+            )}
+          >
+            {settings.ratio} <span className="text-white/30">|</span> {settings.duration}s
+            <Settings2 className="h-3 w-3" />
+          </button>
         </div>
 
-        {/* Remix card — thumbnail preview */}
-        {remix && (
-          <div className="mx-3 mb-2 flex items-center gap-2.5 rounded-xl border border-yellow/20 bg-yellow/5 p-2">
-            {/* Thumbnail */}
-            <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-ink">
-              {mediaUrl(remix.thumbnailUrl) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={mediaUrl(remix.thumbnailUrl) ?? undefined} alt={remix.title} className="h-full w-full object-cover" />
-              ) : mediaUrl(remix.url) ? (
-                <video src={mediaUrl(remix.url) ?? undefined} className="h-full w-full object-cover" muted playsInline />
-              ) : null}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                <Shuffle className="h-3.5 w-3.5 text-yellow" />
-              </div>
-            </div>
-            {/* Info */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-[11px] font-semibold text-yellow/80 uppercase tracking-wide">Remixing</p>
-                <span className="rounded px-1 py-0.5 text-[11px] font-mono font-medium text-yellow bg-yellow/15">@{remix.label}</span>
-              </div>
-              <p className="truncate text-[13px] font-medium text-white leading-snug mt-0.5">{remix.title}</p>
-              <p className="text-[11px] text-white/40 mt-0.5">{remix.duration}s · duration locked</p>
-            </div>
-            {/* Dismiss */}
-            <button
-              onClick={clearRemix}
-              className="flex-shrink-0 rounded-full p-1 text-white/40 hover:text-white transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
-
-        <div className="px-3 pb-2">
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value.slice(0, 80))}
-            placeholder="Video name"
-            disabled={!session || submitting}
-            className="w-full bg-transparent text-[15px] font-semibold text-white outline-none placeholder:text-white/30 disabled:opacity-40"
-          />
-        </div>
-
+        <div className="mx-1.5 mt-1.5 mb-1.5 flex items-stretch gap-1.5">
         {/* Prompt — chips render inline; the stored prompt is still @Handle / @Image1 */}
-        <div className="relative px-3 pb-1">
+        <motion.div
+          layout
+          className="relative min-w-0 flex-1 rounded-xl bg-white/[0.06] px-2.5 py-1.5"
+          transition={{ type: "spring", stiffness: 380, damping: 32 }}
+        >
           {!prompt && (
-            <p className="pointer-events-none absolute left-3 top-0 text-[14px] text-white/30">
+            <p className="pointer-events-none absolute left-2.5 top-1.5 text-[14px] text-white/50">
               {session ? "Describe what you want to generate… (⌘↵ to send)" : "Connect your wallet to start creating"}
             </p>
           )}
@@ -820,10 +797,46 @@ export function OmniBox() {
               (!session || submitting) && "opacity-40",
             )}
           />
+        </motion.div>
+        <AnimatePresence initial={false}>
+          {remix && (
+            <motion.aside
+              key="remix-card"
+              initial={{ width: 0, opacity: 0, x: 28 }}
+              animate={{ width: 148, opacity: 1, x: 0 }}
+              exit={{ width: 0, opacity: 0, x: 28 }}
+              transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="flex h-full w-[148px] flex-col gap-2 rounded-xl border border-yellow/25 bg-yellow/10 p-2">
+                <div className="flex items-start justify-between gap-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-yellow/80">Remixing</p>
+                  <button
+                    onClick={clearRemix}
+                    className="rounded-full p-0.5 text-white/50 hover:text-white"
+                    aria-label="Clear remix"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+                <div className="relative h-14 overflow-hidden rounded-lg bg-ink">
+                  {mediaUrl(remix.thumbnailUrl) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={mediaUrl(remix.thumbnailUrl) ?? undefined} alt="" className="h-full w-full object-cover" />
+                  ) : mediaUrl(remix.url) ? (
+                    <video src={mediaUrl(remix.url) ?? undefined} className="h-full w-full object-cover" muted playsInline />
+                  ) : null}
+                </div>
+                <p className="truncate text-[12px] font-medium leading-tight text-white">{remix.title}</p>
+                <p className="text-[10px] text-white/45">{remix.duration}s · locked</p>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
         </div>
 
         {/* Bottom bar — thumbnails + controls */}
-        <div className="flex items-center gap-2 border-t border-white/5 px-3 py-2">
+        <div className="flex items-center gap-1.5 border-t border-white/5 px-1.5 py-1.5">
           <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0">
             {/* Selected KOL chips — avatar + handle */}
             {selectedKols.map((handle) => {
