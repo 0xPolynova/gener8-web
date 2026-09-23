@@ -41,6 +41,8 @@ export function VideoCard({
   published,
   onTogglePublish,
   onArchive,
+  spotlight = false,
+  onEnded,
 }: {
   video: VideoWithCreator;
   onLike?: (id: string) => void;
@@ -57,6 +59,8 @@ export function VideoCard({
   published?: boolean;
   onTogglePublish?: () => void;
   onArchive?: () => void;
+  spotlight?: boolean;
+  onEnded?: () => void;
 }) {
   const [hover, setHover] = useState(false);
   const span = video.gridSpan ?? "normal";
@@ -95,7 +99,9 @@ export function VideoCard({
               videoUrl={video.videoUrl}
               thumbnailUrl={video.thumbnailUrl}
               poster={video.poster}
-              playing={hover}
+              playing={hover || spotlight}
+              loop={!spotlight}
+              onEnded={spotlight ? onEnded : undefined}
               muted={muted}
               priority={priority}
             />

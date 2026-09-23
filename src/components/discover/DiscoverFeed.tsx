@@ -37,7 +37,9 @@ export function DiscoverFeed() {
   const [muted, setMuted] = useState(true);
   const [filter, setFilter] = useState<DiscoverFilter>("trending");
   const [shown, setShown] = useState(PAGE_SIZE);
+  const [spotlight, setSpotlight] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
+  const spotlightStarted = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +77,45 @@ export function DiscoverFeed() {
     return () => observer.disconnect();
   }, [loading, videos.length, shown]);
 
+  useEffect(() => {
+    const shared = new URLSearchParams(window.location.search).get("v");
+    if (!shared || loading || spotlightStarted.current === shared) return;
+    const index = videos.findIndex((video) => video.id === shared);
+    if (index < 0) return;
+    spotlightStarted.current = shared;
+    setShown((count) => Math.max(count, index + 1));
+    setSpotlight(shared);
+  }, [loading, videos]);
+
+  useEffect(() => {
+    if (!spotlight) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-video="${spotlight}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [spotlight, shown]);
+
+  useEffect(() => {
+    if (!spotlight) return;
+    let streakStart = 0;
+    let last = 0;
+    let timer = 0;
+    const onMove = () => {
+      const now = Date.now();
+      if (!last || now - last > 500) streakStart = now;
+      last = now;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setSpotlight(null), Math.max(0, 2500 - (now - streakStart)));
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.clearTimeout(timer);
+    };
+  }, [spotlight]);
+
   const onLike = async (id: string) => {
     if (!session) {
       toast("Connect your wallet to like a video.");
@@ -94,7 +135,7 @@ export function DiscoverFeed() {
   };
 
   const onShare = async (id: string) => {
-    const url = `${window.location.origin}/video/${id}`;
+    const url = `${window.location.origin}/discover?v=${id}`;
     await navigator.clipboard.writeText(url);
     toast("Link copied", "success");
   };
@@ -165,20 +206,36 @@ export function DiscoverFeed() {
             <div key={slice.map((video) => video.id).join("-")} className="mb-3">
               <BentoGrid
                 items={slice.map((video) => ({ key: video.id, aspectRatio: video.aspectRatio }))}
-                render={(index) => (
-                  <VideoCard
-                    video={slice[index]}
-                    onLike={onLike}
-                    onShare={onShare}
-                    onRemix={onRemix}
-                    remixLabel={walletAddress ? "Remix" : "Connect wallet"}
-                    muted={muted}
-                    onToggleMute={() => setMuted((on) => !on)}
-                    showMeta={false}
-                    fill
-                    priority={page === 0 && index < 4}
-                  />
-                )}
+                render={(index) => {
+                  const video = slice[index];
+                  const active = spotlight === video.id;
+                  return (
+                    <motion.div
+                      data-video={video.id}
+                      className={active ? "relative z-20 h-full rounded-[12px] ring-2 ring-yellow" : "h-full"}
+                      animate={{
+                        opacity: spotlight && !active ? 0.45 : 1,
+                        scale: active ? 1.04 : 1,
+                      }}
+                      transition={{ type: "spring", stiffness: 280, damping: 26 }}
+                    >
+                      <VideoCard
+                        video={video}
+                        onLike={onLike}
+                        onShare={onShare}
+                        onRemix={onRemix}
+                        remixLabel={walletAddress ? "Remix" : "Connect wallet"}
+                        muted={muted && !active}
+                        onToggleMute={() => setMuted((on) => !on)}
+                        showMeta={false}
+                        fill
+                        spotlight={active}
+                        onEnded={() => setSpotlight(null)}
+                        priority={page === 0 && index < 4}
+                      />
+                    </motion.div>
+                  );
+                }}
               />
             </div>
           );

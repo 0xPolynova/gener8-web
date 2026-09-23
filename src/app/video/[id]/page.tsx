@@ -1,4 +1,4 @@
-import { VideoDetail } from "@/components/video/VideoDetail";
+import { redirect } from "next/navigation";
 
 export default async function VideoPage({
   params,
@@ -6,5 +6,5 @@ export default async function VideoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <VideoDetail id={id} />;
+  redirect(`/discover?v=${id}`);
 }
