@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Share2, Maximize2, Volume2, VolumeX, Shuffle } from "lucide-react";
+import { Heart, Share2, Maximize2, Volume2, VolumeX, Shuffle, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -162,9 +162,13 @@ export function VideoCard({
                 e.stopPropagation();
                 onRemix(video);
               }}
-              className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full bg-yellow px-3 py-1 text-[16.5px] font-bold leading-none text-ink transition-all hover:bg-yellow-bright active:scale-95"
+              className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full bg-yellow px-3.5 py-2.5 text-[16.5px] font-bold leading-none text-ink transition-all hover:bg-yellow-bright active:scale-95"
             >
-              <Shuffle className="h-4 w-4" />
+              {remixLabel === "Connect wallet" ? (
+                <Wallet className="h-4 w-4" />
+              ) : (
+                <Shuffle className="h-4 w-4" />
+              )}
               {remixLabel}
             </button>
           )}
