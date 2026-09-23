@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 
 export interface Kol {
@@ -13,31 +15,35 @@ export interface Kol {
   avatar: string;
 }
 
+let extraKols: Kol[] = [];
+
+export function rememberKols(kols: Kol[]) {
+  extraKols = kols;
+}
+
+export function findKol(handle: string) {
+  return extraKols.find((kol) => kol.handle === handle) ?? KOLS.find((kol) => kol.handle === handle);
+}
+
 export const KOLS: Kol[] = [
   // Row 1
   { id: "banks",    name: "Banks",       handle: "Banks",          avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/843b3e0f-0cae-45cd-1b65-dc2fd1759d00/public" },
   { id: "orangie",  name: "Orangie",     handle: "orangie",        avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b0fe919a-2c56-449c-f575-200ea6294100/public" },
   { id: "rasmr",    name: "RasmR",       handle: "rasmr",          avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/9c47feba-735f-48e2-97a1-4549866feb00/public" },
   { id: "tjr",      name: "TJR",         handle: "TJR",            avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b079d19a-8290-4b3a-604d-b88fd6de7a00/public" },
-  { id: "ansem",    name: "Ansem",       handle: "blknoiz06",      avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/843b3e0f-0cae-45cd-1b65-dc2fd1759d00/public" },
+  { id: "frank",    name: "Frank De Gods", handle: "FrankDeGods", avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/a007dc78-6c50-412c-07d2-93c05ae37a00/public" },
   // Row 2
-  { id: "hsaka",    name: "Hsaka",       handle: "HsakaTrades",    avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b0fe919a-2c56-449c-f575-200ea6294100/public" },
-  { id: "cobie",    name: "Cobie",       handle: "cobie",          avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/9c47feba-735f-48e2-97a1-4549866feb00/public" },
-  { id: "arthur",   name: "Arthur Hayes","handle": "CryptoHayes",  avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b079d19a-8290-4b3a-604d-b88fd6de7a00/public" },
-  { id: "gcr",      name: "GCR",         handle: "GiganticRebirth",avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/843b3e0f-0cae-45cd-1b65-dc2fd1759d00/public" },
-  { id: "zach",     name: "ZachXBT",     handle: "zachxbt",        avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b0fe919a-2c56-449c-f575-200ea6294100/public" },
+  { id: "brez",     name: "Brez Scales", handle: "BrezScales",  avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/bc5c8e5a-46f7-4618-e89f-33d609bd9900/public" },
+  { id: "ansem",    name: "Ansem",       handle: "blknoiz06",   avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/f131fe97-f895-4a1e-b14d-2a3b4f583f00/public" },
+  { id: "kimchi",   name: "Kimchi",      handle: "Kimchi",      avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/39fcfe69-c1c6-486b-cf0f-f024af66e500/public" },
+  { id: "jack",     name: "Jack Duval",  handle: "JackDuval",   avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/e548f9b8-7432-4559-edbb-e0754c598600/public" },
+  { id: "alx",      name: "Alxcooks",    handle: "alxcooks",    avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/e063ae32-5fc7-4a59-b2ca-544c5e50e200/public" },
   // Row 3
-  { id: "pentoshi", name: "Pentoshi",    handle: "Pentosh1",       avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/9c47feba-735f-48e2-97a1-4549866feb00/public" },
-  { id: "miles",    name: "Miles D",     handle: "milesdeutscher", avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b079d19a-8290-4b3a-604d-b88fd6de7a00/public" },
-  { id: "gainzy",   name: "Gainzy",      handle: "gainzyXBT",      avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/843b3e0f-0cae-45cd-1b65-dc2fd1759d00/public" },
-  { id: "light",    name: "Light",       handle: "LightCrypto",    avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b0fe919a-2c56-449c-f575-200ea6294100/public" },
-  { id: "nftbird",  name: "NFTbird",     handle: "nftbird",        avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/9c47feba-735f-48e2-97a1-4549866feb00/public" },
-  // Row 4
-  { id: "cobain",   name: "CryptoCobain","handle":"CryptoCobain",  avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b079d19a-8290-4b3a-604d-b88fd6de7a00/public" },
-  { id: "kaleo",    name: "Kaleo",       handle: "CryptoKaleo",    avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/843b3e0f-0cae-45cd-1b65-dc2fd1759d00/public" },
-  { id: "murad",    name: "Murad",       handle: "MuradMahmudov",  avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b0fe919a-2c56-449c-f575-200ea6294100/public" },
-  { id: "degen",    name: "DegenSpartan","handle":"DegenSpartan",   avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/9c47feba-735f-48e2-97a1-4549866feb00/public" },
-  { id: "luma",     name: "LUma",        handle: "luma__JOkl",     avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/b079d19a-8290-4b3a-604d-b88fd6de7a00/public" },
+  { id: "threadguy", name: "ThreadGuy",  handle: "ThreadGuy",   avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/e3a03dfe-2256-4e0e-2578-65520e7b1900/public" },
+  { id: "togi",     name: "Togi",        handle: "Togi",          avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/0581ad77-069b-410f-335c-88cf1819a100/public" },
+  { id: "steve",    name: "SteveWillDoIt", handle: "SteveWillDoIt", avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/c8435d56-b3c3-47fa-74cf-b0351b0a7900/public" },
+  { id: "seyong",   name: "Seyong",      handle: "Seyong",        avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/5d2e420a-cf41-495a-bae3-13265b8ecd00/public" },
+  { id: "odablock", name: "Odablock",    handle: "Odablock",      avatar: "https://imagedelivery.net/evSvvg4gSrZmei5DvWV8Aw/f475cda1-cb5a-42ff-d8c6-ce3674270b00/public" },
 ];
 
 interface KolPickerProps {
@@ -125,6 +131,59 @@ function StyleButton({ onPick }: { onPick: (mode: "new" | "community") => void }
 }
 
 export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPickerProps) {
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const newKolRef = useRef<HTMLButtonElement>(null);
+  const [newKolTip, setNewKolTip] = useState<{ top: number; left: number } | null>(null);
+  const [library, setLibrary] = useState<Kol[]>([]);
+  const [draft, setDraft] = useState<{ file: File; preview: string } | null>(null);
+  const [name, setName] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setNewKolTip(null);
+      return;
+    }
+    let cancelled = false;
+    apiFetch("/api/kols")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        const kols = (data.kols ?? []) as Kol[];
+        rememberKols(kols);
+        setLibrary(kols);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const submitKol = async () => {
+    if (!draft || name.trim().length < 2) {
+      toast("Add the KOL’s name.", "error");
+      return;
+    }
+    setSending(true);
+    try {
+      const body = new FormData();
+      body.set("file", draft.file);
+      body.set("name", name.trim());
+      const res = await apiFetch("/api/kols", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn’t send that KOL.");
+      toast("Sent for approval.", "success");
+      URL.revokeObjectURL(draft.preview);
+      setDraft(null);
+      setName("");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Couldn’t send that KOL.", "error");
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (typeof document === "undefined") return null;
 
   return createPortal(
@@ -172,7 +231,37 @@ export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPic
 
               {/* Grid 3×6 */}
               <div className="grid grid-cols-6 gap-1 p-1.5">
-                {KOLS.map((kol) => {
+                <button
+                  ref={newKolRef}
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  onMouseEnter={() => {
+                    const rect = newKolRef.current?.getBoundingClientRect();
+                    if (!rect) return;
+                    setNewKolTip({ top: rect.top, left: rect.left + rect.width / 2 });
+                  }}
+                  onMouseLeave={() => setNewKolTip(null)}
+                  className="group relative flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-white/30 bg-white/[0.03] text-center transition-colors hover:border-yellow/80 hover:bg-yellow/10"
+                >
+                  <span className="pointer-events-none absolute text-7xl font-light leading-none text-white/15">+</span>
+                  <span className="relative flex flex-col items-center text-[13px] font-semibold leading-tight text-white">
+                    <span>SUBMIT</span>
+                    <span>NEW KOL</span>
+                  </span>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (!file) return;
+                      setDraft({ file, preview: URL.createObjectURL(file) });
+                    }}
+                  />
+                </button>
+                {[...KOLS, ...library].map((kol) => {
                   const isSelected = selected.includes(kol.handle);
                   return (
                     <motion.div
@@ -188,8 +277,8 @@ export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPic
                       }}
                       whileTap={{ scale: 0.97 }}
                       className={cn(
-                        "group relative w-full aspect-square overflow-hidden rounded-xl transition-all duration-150 cursor-pointer",
-                        isSelected ? "ring-2 ring-inset ring-yellow/70" : "",
+                        "group relative w-full aspect-square overflow-hidden rounded-xl transition-all duration-150 cursor-pointer ring-2 ring-inset ring-transparent hover:ring-white/45",
+                        isSelected ? "ring-yellow/70 hover:ring-yellow/70" : "",
                       )}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -223,7 +312,7 @@ export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPic
               {selected.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 border-t border-white/6 px-3 py-2.5">
                   {selected.map((handle) => {
-                    const kol = KOLS.find((k) => k.handle === handle);
+                    const kol = findKol(handle);
                     return (
                       <span
                         key={handle}
@@ -241,9 +330,52 @@ export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPic
                   })}
                 </div>
               )}
+              {draft && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 p-6">
+                  <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-surface p-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={draft.preview} alt="" className="mx-auto h-28 w-28 rounded-xl object-cover" />
+                    <input
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="KOL name"
+                      className="mt-3 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none"
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white"
+                        onClick={() => {
+                          URL.revokeObjectURL(draft.preview);
+                          setDraft(null);
+                          setName("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={sending}
+                        className="flex-1 rounded-lg bg-yellow py-2 text-sm font-semibold text-ink"
+                        onClick={() => void submitKol()}
+                      >
+                        {sending ? "Sending…" : "Send"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </>
+      )}
+      {newKolTip && (
+        <div
+          className="pointer-events-none fixed z-[32] w-56 -translate-x-1/2 -translate-y-full rounded-lg border border-white/10 bg-[#141414] px-3 py-2 text-left text-[12px] leading-snug text-white shadow-xl"
+          style={{ top: newKolTip.top - 8, left: newKolTip.left }}
+        >
+          This permanently adds a new KOL and needs admin approval. Use upload media to add a character immediately.
+        </div>
       )}
     </AnimatePresence>,
     document.body,

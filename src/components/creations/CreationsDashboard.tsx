@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Tabs } from "@/components/ui/Tabs";
+import { GeneratingPoster } from "@/components/creations/GeneratingPoster";
 import { VideoThumb } from "@/components/video/VideoThumb";
 import { useToast } from "@/components/ui/Toast";
 import { useAppState } from "@/components/providers/AppState";
@@ -110,7 +111,7 @@ export function CreationsDashboard() {
           actionHref="/create"
         />
       )}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
         {videos.map((video, index) => (
           <article
             key={video.id}
@@ -118,15 +119,21 @@ export function CreationsDashboard() {
           >
             <Link
               href={`/video/${video.id}`}
-              className="relative aspect-video overflow-hidden bg-ink"
+              className="relative block h-[220px] overflow-hidden bg-ink"
             >
-              <VideoThumb
-                videoUrl={video.videoUrl}
-                thumbnailUrl={video.thumbnailUrl}
-                poster={video.poster}
-                priority={index < 3}
-              />
-              <StatusPill status={video.status} visibility={video.visibility} />
+              {isGenerating(video.status) ? (
+                <GeneratingPoster />
+              ) : (
+                <VideoThumb
+                  videoUrl={video.videoUrl}
+                  thumbnailUrl={video.thumbnailUrl}
+                  poster={video.poster}
+                  priority={index < 3}
+                />
+              )}
+              {!isGenerating(video.status) && (
+                <StatusPill status={video.status} visibility={video.visibility} />
+              )}
             </Link>
             <div className="flex flex-1 flex-col p-3">
               <Link
@@ -155,10 +162,14 @@ export function CreationsDashboard() {
                   <Button
                     variant="subtle"
                     size="sm"
-                    onClick={() =>
+                    onClick={() => {
+                      const next = video.visibility === "public" ? "private" : "public";
+                      setVideos((prev) =>
+                        prev.map((v) =>
+                          v.id === video.id ? { ...v, visibility: next } : v,
+                        ),
+                      );
                       void action(video.id, async () => {
-                        const next =
-                          video.visibility === "public" ? "private" : "public";
                         const res = await apiFetch(`/api/videos/${video.id}`, {
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
@@ -169,12 +180,14 @@ export function CreationsDashboard() {
                         setVideos((prev) =>
                           prev.map((v) => (v.id === video.id ? data.video : v)),
                         );
-                        toast(
-                          next === "public" ? "Published" : "Unpublished",
-                          "success",
+                      }).catch(() => {
+                        setVideos((prev) =>
+                          prev.map((v) =>
+                            v.id === video.id ? { ...v, visibility: video.visibility } : v,
+                          ),
                         );
-                      })
-                    }
+                      });
+                    }}
                   >
                     <Upload className="h-3.5 w-3.5" />
                     {video.visibility === "public" ? "Unpublish" : "Publish"}
@@ -231,6 +244,10 @@ function Header() {
       </p>
     </div>
   );
+}
+
+function isGenerating(status: string) {
+  return ["queued", "preparing", "generating", "processing"].includes(status);
 }
 
 function StatusPill({

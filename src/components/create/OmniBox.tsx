@@ -1,18 +1,20 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { X, Plus, Sparkles, Settings2, ChevronDown, Shuffle, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, Plus, Sparkles, Settings2, Shuffle, Users } from "lucide-react";
 import { apiFetch, mediaUrl } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
-import { KolPicker, KOLS, type Kol } from "./KolPicker";
+import { KolPicker, KOLS, findKol, type Kol } from "./KolPicker";
 import { StylePicker } from "./StylePicker";
 
 interface OmniMedia {
   id: string;
   type: "image" | "video";
   localUrl: string;
+  thumbUrl: string | null;
   uploadedUrl: string | null;
   label: string;
   uploading: boolean;
@@ -27,6 +29,7 @@ interface RemixVideo {
   url: string;
   thumbnailUrl: string | null;
   duration: number;
+  aspectRatio: OmniSettings["ratio"];
   title: string;
   id: string;
   label: string;
@@ -41,14 +44,52 @@ function nextLabel(type: "image" | "video") {
   return type === "image" ? `Image${++imgSeq}` : `Video${++vidSeq}`;
 }
 
-function remixTemplate(videoLabel: string): string {
-  return (
-    `@${videoLabel} replace the characters in this video with these characters. ` +
-    `This video must be exactly like @${videoLabel} — do not change anything but the characters, ` +
-    `keeping their lipsync and motion. The framing, cutaways, camera angles, and video composition ` +
-    `must stay exactly the same. Never swap character placement; all characters stay in the same ` +
-    `position throughout the entire video.`
-  );
+function frameFromFile(file: File): Promise<string | null> {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = url;
+  return new Promise((resolve) => {
+    const finish = (value: string | null) => {
+      URL.revokeObjectURL(url);
+      resolve(value);
+    };
+    video.onerror = () => finish(null);
+    video.onloadeddata = () => {
+      const draw = () => {
+        if (!video.videoWidth) {
+          finish(null);
+          return;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          finish(null);
+          return;
+        }
+        const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+        const width = video.videoWidth * scale;
+        const height = video.videoHeight * scale;
+        ctx.drawImage(video, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+        finish(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      if (Number.isFinite(video.duration) && video.duration > 0.3) {
+        video.onseeked = draw;
+        video.currentTime = 0.2;
+      } else {
+        draw();
+      }
+    };
+  });
+}
+
+function remixTemplate(videoLabel: string, extras: string[]) {
+  const swaps = extras.length ? ` ${extras.join(" ")}` : "";
+  return `@${videoLabel} is the video we are recreating exactly.\n\nWe want to swap out the characters for:${swaps}`;
 }
 
 function tokenSelector(token: string) {
@@ -167,6 +208,7 @@ function fillEditor(editor: HTMLElement, text: string, images: Record<string, st
 export function OmniBox() {
   const { session, eligibility } = useAppState();
   const { toast } = useToast();
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -178,6 +220,7 @@ export function OmniBox() {
   const mediaRef = useRef<OmniMedia[]>([]);
 
   const [prompt, setPrompt] = useState("");
+  const [title, setTitle] = useState("");
   const [media, setMedia] = useState<OmniMedia[]>([]);
   const [remix, setRemix] = useState<RemixVideo | null>(null);
   const [settings, setSettings] = useState<OmniSettings>({ ratio: "16:9", duration: 15 });
@@ -284,34 +327,40 @@ export function OmniBox() {
         videoUrl: string;
         thumbnailUrl: string | null;
         duration: number;
+        aspectRatio?: OmniSettings["ratio"];
         title: string;
+        prompt?: string;
         id: string;
       };
       const label = nextLabel("video");
+      const ratio = RATIOS.includes(detail.aspectRatio as OmniSettings["ratio"])
+        ? (detail.aspectRatio as OmniSettings["ratio"])
+        : "16:9";
       const remixData: RemixVideo = {
         url: detail.videoUrl,
         thumbnailUrl: detail.thumbnailUrl,
         duration: detail.duration,
+        aspectRatio: ratio,
         title: detail.title,
         id: detail.id,
         label,
       };
       setRemix(remixData);
-      setSettings((s) => ({ ...s, duration: detail.duration }));
+      setSettings((s) => ({ ...s, duration: detail.duration, ratio }));
       const editor = editorRef.current;
       if (editor) {
         const images: Record<string, string | null> = {
           [`@${label}`]: detail.thumbnailUrl,
         };
         for (const handle of selectedKolsRef.current) {
-          images[`@${handle}`] = KOLS.find((k) => k.handle === handle)?.avatar ?? null;
+          images[`@${handle}`] = findKol(handle)?.avatar ?? null;
         }
-        for (const item of mediaRef.current) images[`@${item.label}`] = item.localUrl;
+        for (const item of mediaRef.current) images[`@${item.label}`] = item.thumbUrl;
         const extras = [
           ...selectedKolsRef.current.map((h) => `@${h}`),
           ...mediaRef.current.map((m) => `@${m.label}`),
         ];
-        const text = [remixTemplate(label), ...extras].filter(Boolean).join(" ");
+        const text = remixTemplate(label, extras);
         fillEditor(editor, text, images);
         setPrompt(serializeEditor(editor));
         editor.focus();
@@ -330,9 +379,9 @@ export function OmniBox() {
     }
     const images: Record<string, string | null> = {};
     for (const handle of selectedKolsRef.current) {
-      images[`@${handle}`] = KOLS.find((k) => k.handle === handle)?.avatar ?? null;
+      images[`@${handle}`] = findKol(handle)?.avatar ?? null;
     }
-    for (const item of mediaRef.current) images[`@${item.label}`] = item.localUrl;
+    for (const item of mediaRef.current) images[`@${item.label}`] = item.thumbUrl;
     const text = [
       ...selectedKolsRef.current.map((h) => `@${h}`),
       ...mediaRef.current.map((m) => `@${m.label}`),
@@ -352,6 +401,7 @@ export function OmniBox() {
             id: crypto.randomUUID(),
             type: "image" as const,
             localUrl: url,
+            thumbUrl: url,
             uploadedUrl: url,
             label: nextLabel("image"),
             uploading: false,
@@ -383,7 +433,7 @@ export function OmniBox() {
   const toggleKol = (handle: string) => {
     const editor = editorRef.current;
     const token = `@${handle}`;
-    const kol = KOLS.find((k) => k.handle === handle);
+    const kol = findKol(handle);
     if (selectedKolsRef.current.includes(handle)) {
       setSelectedKols((prev) => prev.filter((h) => h !== handle));
       if (editor) removeChip(editor, token);
@@ -430,16 +480,19 @@ export function OmniBox() {
         if (!isVideo && !isImage) continue;
 
         const label = nextLabel(isVideo ? "video" : "image");
+        const localUrl = URL.createObjectURL(file);
+        const thumbUrl = isVideo ? await frameFromFile(file) : localUrl;
         const item: OmniMedia = {
           id: crypto.randomUUID(),
           type: isVideo ? "video" : "image",
-          localUrl: URL.createObjectURL(file),
+          localUrl,
+          thumbUrl,
           uploadedUrl: null,
           label,
           uploading: true,
         };
         setMedia((prev) => [...prev, item]);
-        if (editorRef.current) insertChip(editorRef.current, `@${label}`, item.localUrl, undefined, undefined, true);
+        if (editorRef.current) insertChip(editorRef.current, `@${label}`, thumbUrl, undefined, undefined, true);
 
         const form = new FormData();
         form.append("file", file);
@@ -484,6 +537,7 @@ export function OmniBox() {
     if (!session) { toast("Connect your wallet to generate.", "error"); return; }
     const trimmed = prompt.trim();
     if (!trimmed) { toast("Write a prompt first.", "error"); return; }
+    if (!title.trim()) { toast("Name the video first.", "error"); return; }
     if (media.some((m) => m.uploading)) { toast("Wait for uploads to finish.", "error"); return; }
 
     setSubmitting(true);
@@ -496,12 +550,13 @@ export function OmniBox() {
         method: "POST",
         body: JSON.stringify({
           prompt: trimmed,
+          title: title.trim(),
           omniAssets,
           referenceVideoUrl: remix?.url ?? null,
           visibility: "public",
           settings: {
             model: "wan3.0-video",
-            aspectRatio: settings.ratio,
+            aspectRatio: remix?.aspectRatio ?? settings.ratio,
             duration: settings.duration,
             quality: "standard",
             negativePrompt: "",
@@ -527,9 +582,11 @@ export function OmniBox() {
         }).catch(() => undefined);
       }
 
-      toast("Generating… this takes ~60s. Check My Creations.", "success");
+      toast("Generating… this takes 4–5 minutes.", "success");
+      router.push("/creations");
       if (editorRef.current) editorRef.current.replaceChildren();
       setPrompt("");
+      setTitle("");
       setMedia([]);
       setRemix(null);
       setSelectedKols([]);
@@ -557,7 +614,7 @@ export function OmniBox() {
       id: item.id,
       token: `@${item.label}`,
       title: item.label,
-      image: item.localUrl,
+      image: item.thumbUrl,
     })),
   ].filter((item) =>
     !mentionQ || item.title.toLowerCase().includes(mentionQ) || item.token.toLowerCase().includes(mentionQ),
@@ -644,12 +701,14 @@ export function OmniBox() {
               {RATIOS.map((r) => (
                 <button
                   key={r}
+                  disabled={durationLocked}
                   onClick={() => setSettings((s) => ({ ...s, ratio: r }))}
                   className={cn(
                     "rounded-lg px-2.5 py-1 text-[13px] font-medium transition-colors",
                     settings.ratio === r
                       ? "bg-yellow text-ink"
                       : "border border-white/10 text-white/70 hover:text-white",
+                    durationLocked && "cursor-not-allowed opacity-60",
                   )}
                 >{r}</button>
               ))}
@@ -671,14 +730,7 @@ export function OmniBox() {
 
         {/* Top bar */}
         <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
-          <button className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium text-white bg-elevated hover:bg-white/10 transition-colors">
-            Omni <ChevronDown className="h-3 w-3 text-white/40" />
-          </button>
           <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-[12px] font-medium text-white/60">
-              <span className="h-2 w-2 rounded-full border border-violet-400/60 bg-violet-500/20" />
-              Wan3.0
-            </div>
             <button
               onClick={() => setShowSettings((s) => !s)}
               className={cn(
@@ -726,6 +778,16 @@ export function OmniBox() {
           </div>
         )}
 
+        <div className="px-3 pb-2">
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value.slice(0, 80))}
+            placeholder="Video name"
+            disabled={!session || submitting}
+            className="w-full bg-transparent text-[15px] font-semibold text-white outline-none placeholder:text-white/30 disabled:opacity-40"
+          />
+        </div>
+
         {/* Prompt — chips render inline; the stored prompt is still @Handle / @Image1 */}
         <div className="relative px-3 pb-1">
           {!prompt && (
@@ -765,7 +827,7 @@ export function OmniBox() {
           <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0">
             {/* Selected KOL chips — avatar + handle */}
             {selectedKols.map((handle) => {
-              const kol = KOLS.find((k) => k.handle === handle);
+              const kol = findKol(handle);
               if (!kol) return null;
               return (
                 <div key={handle} className="group/thumb relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
@@ -784,11 +846,11 @@ export function OmniBox() {
             {/* Media thumbnails */}
             {media.map((item) => (
               <div key={item.id} className="group/thumb relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
-                {item.type === "video" ? (
-                  <video src={item.localUrl} className="h-full w-full object-cover" muted />
+                {item.type === "video" && !item.thumbUrl ? (
+                  <video src={item.localUrl} className="h-full w-full object-cover" muted playsInline />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.localUrl} alt={item.label} className="h-full w-full object-cover" />
+                  <img src={item.thumbUrl || item.localUrl} alt={item.label} className="h-full w-full object-cover" />
                 )}
                 {item.uploading ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-ink/70">
@@ -849,10 +911,10 @@ export function OmniBox() {
 
           <button
             onClick={handleSubmit}
-            disabled={!session || submitting || !prompt.trim()}
+            disabled={!session || submitting || !prompt.trim() || !title.trim()}
             className={cn(
               "flex h-8 flex-shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold transition-all",
-              session && prompt.trim() && !submitting
+              session && prompt.trim() && title.trim() && !submitting
                 ? "bg-yellow text-ink hover:bg-yellow-bright shadow-[0_0_12px_rgba(255,241,118,0.25)]"
                 : "bg-elevated text-white/30 cursor-not-allowed",
             )}

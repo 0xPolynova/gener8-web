@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
 import { WalletButton } from "@/components/wallet/WalletButton";
+import { useAppState } from "@/components/providers/AppState";
+import { isAdminWallet } from "@/lib/admin";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -14,13 +16,17 @@ const LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { walletAddress } = useAppState();
+  const links = isAdminWallet(walletAddress)
+    ? [...LINKS, { href: "/admin", label: "Admin" }]
+    : LINKS;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-ink/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-6 px-4 md:px-6">
         <Logo />
         <nav className="hidden items-center gap-1 md:flex">
-          {LINKS.map((link) => {
+          {links.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
               <Link

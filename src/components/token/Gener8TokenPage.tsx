@@ -5,23 +5,13 @@ import { Check, Lock, Wallet, Clapperboard, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAppState } from "@/components/providers/AppState";
 import { TOKEN_GATING } from "@/lib/config/gating";
-import { VIDEO_MODELS, displayModelName } from "@/lib/config/models";
 import { formatTokenBalance } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-const TIER_COPY: Record<number, { blurb: string; perks: string[] }> = {
-  1: {
-    blurb: "The door in. Hold enough GENER8 to generate.",
-    perks: ["Private studio", "Publish to Discover"],
-  },
-  2: {
-    blurb: "Adds Seedance 2.0, Kling 3.0 Standard, Wan 2.7, and Veo 3.1 Fast.",
-    perks: [],
-  },
-  3: {
-    blurb: "Adds Wan 3.0, Seedance 2.5, Kling 3.0 Pro, Veo 3.1, and Sora 2 Pro.",
-    perks: [],
-  },
+const TIER_COPY: Record<number, string> = {
+  1: "One generation an hour.",
+  2: "Three generations an hour.",
+  3: "Unlimited generations. No hourly cap.",
 };
 
 export function Gener8TokenPage() {
@@ -37,10 +27,9 @@ export function Gener8TokenPage() {
         $<span className="text-yellow">GENER8</span>
       </h1>
       <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
-        Gener8 is hold-to-use. You don’t spend or burn the token to generate —
-        keep {formatTokenBalance(minHold)}+ GENER8 in the wallet you connect,
-        and the studio unlocks. Higher balances open more models and more
-        generations per day.
+        Hold GENER8 in the wallet you connect. The balance is read when you
+        press Generate. It is not saved, and it is not spent. Under{" "}
+        {formatTokenBalance(minHold)} you cannot generate.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -58,7 +47,7 @@ export function Gener8TokenPage() {
 
       <div className="mt-10 grid gap-3 md:grid-cols-3">
         {TOKEN_GATING.tiers.map((tier) => {
-          const copy = TIER_COPY[tier.id];
+          const blurb = TIER_COPY[tier.id];
           const featured = tier.id === 2;
           const yours = currentTierId === tier.id;
           return (
@@ -91,34 +80,18 @@ export function Gener8TokenPage() {
                 </span>
               </p>
               <p className="mt-1 text-xs text-muted">Minimum held in wallet</p>
-              <p className="mt-4 text-sm leading-relaxed text-paper/90">
-                {copy?.blurb}
-              </p>
+              <p className="mt-4 text-sm leading-relaxed text-paper/90">{blurb}</p>
               <ul className="mt-5 space-y-2.5 text-sm">
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow" />
-                  {tier.dailyGenerations} generations / day
+                  {tier.hourlyGenerations == null
+                    ? "Unlimited generations"
+                    : `${tier.hourlyGenerations} generation${tier.hourlyGenerations === 1 ? "" : "s"} / hour`}
                 </li>
-                {tier.id > 1 && (
-                  <li className="flex gap-2">
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow" />
-                    Everything in {TOKEN_GATING.tiers[tier.id - 2]?.label}
-                  </li>
-                )}
-                {VIDEO_MODELS.filter((model) => model.minTier === tier.id).map((model) => (
-                  <li key={model.id} className="flex gap-2">
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow" />
-                    {displayModelName(model.id)}
-                  </li>
-                ))}
-                {copy?.perks
-                  .filter((perk) => !/model/i.test(perk) && !/generation/i.test(perk))
-                  .map((perk) => (
-                    <li key={perk} className="flex gap-2">
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow" />
-                      {perk}
-                    </li>
-                  ))}
+                <li className="flex gap-2">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow" />
+                  One video at a time
+                </li>
               </ul>
             </article>
           );
@@ -135,12 +108,12 @@ export function Gener8TokenPage() {
           {
             icon: Lock,
             title: "Hold",
-            body: "Keep the minimum balance. GENER8 is not deducted when you generate.",
+            body: "50,000, 100,000, or 300,000 GENER8 must be in the wallet at the moment you generate.",
           },
           {
             icon: Clapperboard,
             title: "Create",
-            body: "Generate up to your daily cap. Limits reset at midnight UTC.",
+            body: "One an hour, three an hour, or unlimited. You still finish the current video before the next.",
           },
         ].map((step) => (
           <div
@@ -158,11 +131,13 @@ export function Gener8TokenPage() {
         <div className="flex items-start gap-3">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-yellow" />
           <div>
-            <p className="text-sm font-medium">Not a pay-per-video meter</p>
+            <p className="text-sm font-medium">The loop</p>
             <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
-              Holding GENER8 is the access key. Drop below your tier’s minimum
-              and that day’s extra models or quota lock until the balance is
-              back. Daily counts reset at 00:00 UTC.
+              Creator rewards fund the API for everyone. People buy GENER8 to
+              get access. Trading fees from the token pay for the API credits
+              that run generations. The clips that spread are how the platform
+              grows. More buyers mean more fees, and more fees mean more
+              generations.
             </p>
           </div>
         </div>
