@@ -200,46 +200,42 @@ export function DiscoverFeed() {
           render={() => <VideoCardSkeleton showMeta={false} className="h-full" />}
         />
       ) : (
-        Array.from({ length: Math.ceil(Math.min(shown, videos.length) / PAGE_SIZE) }, (_, page) => {
-          const slice = videos.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-          return (
-            <div key={slice.map((video) => video.id).join("-")} className="mb-3">
-              <BentoGrid
-                items={slice.map((video) => ({ key: video.id, aspectRatio: video.aspectRatio }))}
-                render={(index) => {
-                  const video = slice[index];
-                  const active = spotlight === video.id;
-                  return (
-                    <motion.div
-                      data-video={video.id}
-                      className={active ? "relative z-20 h-full rounded-[12px] ring-2 ring-yellow" : "h-full"}
-                      animate={{
-                        opacity: spotlight && !active ? 0.45 : 1,
-                        scale: active ? 1.04 : 1,
-                      }}
-                      transition={{ type: "spring", stiffness: 280, damping: 26 }}
-                    >
-                      <VideoCard
-                        video={video}
-                        onLike={onLike}
-                        onShare={onShare}
-                        onRemix={onRemix}
-                        remixLabel={walletAddress ? "Remix" : "Connect wallet"}
-                        muted={muted && !active}
-                        onToggleMute={() => setMuted((on) => !on)}
-                        showMeta={false}
-                        fill
-                        spotlight={active}
-                        onEnded={() => setSpotlight(null)}
-                        priority={page === 0 && index < 4}
-                      />
-                    </motion.div>
-                  );
+        <BentoGrid
+          items={videos.slice(0, shown).map((video) => ({
+            key: video.id,
+            aspectRatio: video.aspectRatio,
+          }))}
+          render={(index) => {
+            const video = videos[index];
+            const active = spotlight === video.id;
+            return (
+              <motion.div
+                data-video={video.id}
+                className={active ? "relative z-20 h-full rounded-[12px] ring-2 ring-yellow" : "h-full"}
+                animate={{
+                  opacity: spotlight && !active ? 0.45 : 1,
+                  scale: active ? 1.04 : 1,
                 }}
-              />
-            </div>
-          );
-        })
+                transition={{ type: "spring", stiffness: 280, damping: 26 }}
+              >
+                <VideoCard
+                  video={video}
+                  onLike={onLike}
+                  onShare={onShare}
+                  onRemix={onRemix}
+                  remixLabel={walletAddress ? "Remix" : "Connect wallet"}
+                  muted={muted && !active}
+                  onToggleMute={() => setMuted((on) => !on)}
+                  showMeta={false}
+                  fill
+                  spotlight={active}
+                  onEnded={() => setSpotlight(null)}
+                  priority={index < 4}
+                />
+              </motion.div>
+            );
+          }}
+        />
       )}
       <div ref={sentinel} className="h-px" />
       {!loading && shown >= videos.length && <FeedEnd />}
