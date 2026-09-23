@@ -1,9 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
 import { OmniBox } from "@/components/create/OmniBox";
+import { useAppState } from "@/components/providers/AppState";
 
 function hideChat(pathname: string) {
   return (
@@ -20,8 +22,9 @@ function hideChat(pathname: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { walletAddress } = useAppState();
   if (pathname === "/") return <>{children}</>;
-  const chat = !hideChat(pathname);
+  const chat = !hideChat(pathname) && Boolean(walletAddress);
   const fullBleed = pathname === "/discover" || pathname === "/creations";
 
   return (
@@ -29,12 +32,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main
         className={`w-full flex-1 ${
-          fullBleed ? "pt-3" : "mx-auto max-w-[1440px] px-4 pt-6 md:px-6"
+          fullBleed ? "px-3 pt-3" : "mx-auto max-w-[1440px] px-4 pt-6 md:px-6"
         } ${chat ? "pb-[200px] md:pb-[150px]" : "pb-24"}`}
       >
         {children}
       </main>
-      {chat && <OmniBox />}
+      <AnimatePresence>
+        {chat && (
+          <motion.div
+            key="chat"
+            initial={{ y: 96, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 96, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 32 }}
+          >
+            <OmniBox />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <MobileNav />
     </div>
   );

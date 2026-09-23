@@ -80,7 +80,6 @@ export function CreationsDashboard() {
   if (!session) {
     return (
       <div>
-        <Header />
         <EmptyState
           className="mt-6"
           title="Your ideas will appear here."
@@ -103,9 +102,7 @@ export function CreationsDashboard() {
 
   return (
     <div>
-      <div className="px-3">
-      <Header />
-      <div className="mt-5 flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap gap-3">
         {TABS.map((item) => {
           const active = item.id === tab;
           return (
@@ -126,8 +123,7 @@ export function CreationsDashboard() {
           );
         })}
       </div>
-      </div>
-      {fetching && <p className="mt-6 px-3 text-sm text-muted">Loading…</p>}
+      {fetching && <p className="mt-6 text-sm text-muted">Loading…</p>}
       {!fetching && videos.length === 0 && (
         <EmptyState
           className="mt-6"
@@ -137,10 +133,10 @@ export function CreationsDashboard() {
           actionHref="/create"
         />
       )}
-      <div className="mt-4 flex items-start gap-2">
+      <div className="mt-3 flex items-start gap-3">
         {packColumns(videos, columns, (video) => aspectWeight(video.aspectRatio)).map(
           (column, columnIndex) => (
-          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-2">
+          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-3">
         {column.map((video, index) => (
           <article
             key={video.id}
@@ -282,17 +278,6 @@ export function CreationsDashboard() {
           </Button>
         </div>
       </Modal>
-    </div>
-  );
-}
-
-function Header() {
-  return (
-    <div>
-      <h1 className="text-[28px] font-semibold tracking-tight">My Creations</h1>
-      <p className="mt-1 text-sm text-muted">
-        Everything you’ve generated — private until you publish.
-      </p>
     </div>
   );
 }

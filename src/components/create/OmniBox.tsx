@@ -38,6 +38,57 @@ interface RemixVideo {
 
 const RATIOS: OmniSettings["ratio"][] = ["16:9", "4:3", "1:1", "3:4", "9:16"];
 
+const CHAT_SPARKS: {
+  left?: string;
+  right?: string;
+  top?: string;
+  bottom?: string;
+  delay: number;
+  size: number;
+}[] = [
+  { left: "4%", top: "-5px", delay: 0.1, size: 3 },
+  { left: "18%", top: "-8px", delay: 0.6, size: 2 },
+  { left: "36%", top: "-4px", delay: 1.1, size: 3 },
+  { left: "54%", top: "-7px", delay: 0.3, size: 2 },
+  { left: "72%", top: "-5px", delay: 0.9, size: 3 },
+  { left: "88%", top: "-8px", delay: 1.4, size: 2 },
+  { left: "-5px", top: "30%", delay: 0.4, size: 3 },
+  { left: "-4px", top: "62%", delay: 1.2, size: 2 },
+  { right: "-5px", top: "24%", delay: 0.8, size: 2 },
+  { right: "-4px", top: "68%", delay: 0.2, size: 3 },
+  { left: "10%", bottom: "-6px", delay: 1.0, size: 2 },
+  { left: "28%", bottom: "-4px", delay: 0.5, size: 3 },
+  { left: "46%", bottom: "-7px", delay: 1.5, size: 2 },
+  { left: "64%", bottom: "-5px", delay: 0.7, size: 3 },
+  { left: "82%", bottom: "-8px", delay: 1.3, size: 2 },
+];
+
+function ChatAura() {
+  return (
+    <div className="pointer-events-none absolute -inset-3 -z-10">
+      <div className="animate-glow absolute inset-2 rounded-[28px] bg-yellow/30 blur-2xl" />
+      <div className="absolute inset-x-8 bottom-0 top-4 rounded-full bg-yellow-bright/15 blur-3xl" />
+      {CHAT_SPARKS.map((spark) => (
+        <motion.span
+          key={`${spark.left ?? ""}-${spark.right ?? ""}-${spark.top ?? spark.bottom}`}
+          aria-hidden
+          className="absolute rounded-full bg-yellow shadow-[0_0_8px_#fff176]"
+          style={{
+            left: spark.left,
+            right: spark.right,
+            top: spark.top,
+            bottom: spark.bottom,
+            width: spark.size,
+            height: spark.size,
+          }}
+          animate={{ opacity: [0.15, 0.95, 0.15], scale: [0.6, 1.15, 0.6] }}
+          transition={{ duration: 2.4, repeat: Infinity, delay: spark.delay, ease: "easeInOut" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 let imgSeq = 0;
 let vidSeq = 0;
 
@@ -698,9 +749,8 @@ export function OmniBox() {
         </div>
       )}
 
-      {/* Glow */}
-      <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-violet-500/20 via-fuchsia-400/20 to-yellow/20 animate-glow blur-lg" />
-      <div className="pointer-events-none absolute -inset-px rounded-2xl border border-white/8" />
+      <ChatAura />
+      <div className="pointer-events-none absolute -inset-px rounded-2xl border border-yellow/20" />
 
       <div className="omni-box relative rounded-2xl bg-ink/92 backdrop-blur-xl overflow-hidden shadow-2xl">
 

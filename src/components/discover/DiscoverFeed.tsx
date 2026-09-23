@@ -146,7 +146,7 @@ export function DiscoverFeed() {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-2.5 px-3">
+      <div className="mb-3 flex flex-wrap gap-3">
           {FILTERS.map((item) => {
             const active = item.id === filter;
             return (
@@ -167,7 +167,7 @@ export function DiscoverFeed() {
             );
           })}
         </div>
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-3">
         {(loading
           ? packColumns(
               Array.from({ length: 8 }, (_, i) => i),
@@ -176,7 +176,7 @@ export function DiscoverFeed() {
             )
           : packColumns(videos, columns, (video) => aspectWeight(video.aspectRatio))
         ).map((column, columnIndex) => (
-          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-2">
+          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-3">
             {loading
               ? column.map((i) => (
                   <VideoCardSkeleton key={i as number} tall={(i as number) % 3 === 1} showMeta={false} />
