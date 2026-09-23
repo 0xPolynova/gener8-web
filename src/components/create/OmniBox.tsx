@@ -39,13 +39,6 @@ interface RemixVideo {
 
 const RATIOS: OmniSettings["ratio"][] = ["16:9", "4:3", "1:1", "3:4", "9:16"];
 
-/** Reference clips are capped at 15s. Output plus that reference must stay within 30s. */
-function wanRemixSeconds(source: number) {
-  const reference = Math.min(15, Math.max(1, source));
-  const maxOut = Math.max(2, Math.floor(30 - reference));
-  return Math.min(maxOut, Math.max(2, Math.round(Math.min(source, reference))));
-}
-
 const CHAT_SPARKS: {
   left?: string;
   right?: string;
@@ -413,7 +406,7 @@ export function OmniBox() {
         id: detail.id,
         label,
       };
-      const remixSeconds = wanRemixSeconds(detail.duration);
+      const remixSeconds = Math.min(30, Math.max(2, Math.round(detail.duration)));
       remixData.duration = remixSeconds;
       setRemix(remixData);
       setSettings((s) => ({ ...s, duration: remixSeconds, ratio }));
