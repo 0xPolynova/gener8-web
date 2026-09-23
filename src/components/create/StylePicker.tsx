@@ -12,7 +12,7 @@ interface StylePickerProps {
   mode: "new" | "community";
   session: number;
   onClose: () => void;
-  onPick: (pick: { url: string; style: string }) => void;
+  onPick: (pick: { url: string; style: string; source: "new" | "community" }) => void;
 }
 
 export function StylePicker({ kol, mode, session, onClose, onPick }: StylePickerProps) {
@@ -134,7 +134,7 @@ export function StylePicker({ kol, mode, session, onClose, onPick }: StylePicker
                     <button
                       key={url}
                       type="button"
-                      onClick={() => onPick({ url, style: style.trim() })}
+                      onClick={() => onPick({ url, style: style.trim(), source: "new" })}
                       className="relative aspect-[9/16] overflow-hidden rounded-lg"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -167,7 +167,7 @@ function CommunityStyles({
   onPick,
 }: {
   kol: Kol;
-  onPick: (pick: { url: string; style: string }) => void;
+  onPick: (pick: { url: string; style: string; source: "new" | "community" }) => void;
 }) {
   const [images, setImages] = useState<{ id: string; url: string; style: string }[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -233,7 +233,7 @@ function CommunityStyles({
           <button
             key={item.id}
             type="button"
-            onClick={() => onPick({ url: item.url, style: item.style })}
+            onClick={() => onPick({ url: item.url, style: item.style, source: "community" })}
             className="relative aspect-[9/16] overflow-hidden rounded-lg"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

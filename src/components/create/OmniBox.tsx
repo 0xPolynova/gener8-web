@@ -170,6 +170,7 @@ export function OmniBox() {
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const pendingStyles = useRef<{ kolId: string; handle: string; style: string; imageUrl: string }[]>([]);
   const mentionRef = useRef<HTMLDivElement>(null);
   const kolButtonRef = useRef<HTMLButtonElement>(null);
   const mentionAnchor = useRef<{ node: Text; at: number; len: number } | null>(null);
@@ -340,7 +341,7 @@ export function OmniBox() {
     setPrompt(serializeEditor(editor));
   };
 
-  const useStyleImage = (pick: { url: string; style: string }) => {
+  const useStyleImage = (pick: { url: string; style: string; source: "new" | "community" }) => {
     const kol = styleKol;
     const apply = (url: string) => {
       setMedia((prev) => {
@@ -367,41 +368,16 @@ export function OmniBox() {
     };
 
     apply(pick.url);
-    setStyleKol(null);
-
-    if (!kol) return;
-    void apiFetch("/api/styles/select", {
-      method: "POST",
-      body: JSON.stringify({
+    if (pick.source === "new" && kol) {
+      pendingStyles.current = pendingStyles.current.filter((item) => item.imageUrl !== pick.url);
+      pendingStyles.current.push({
         kolId: kol.id,
         handle: kol.handle,
         style: pick.style,
         imageUrl: pick.url,
-      }),
-    })
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          toast(data.error ?? "Couldn’t save that style for everyone.", "error");
-          return;
-        }
-        if (data.cdn && data.url && data.url !== pick.url) {
-          const editor = editorRef.current;
-          if (editor) {
-            removeChip(editor, pick.url);
-            insertChip(editor, data.url, data.url, `@${kol.handle}`, "STYLED", true);
-            setPrompt(serializeEditor(editor));
-          }
-          setMedia((prev) =>
-            prev.map((item) =>
-              item.uploadedUrl === pick.url
-                ? { ...item, localUrl: data.url, uploadedUrl: data.url }
-                : item,
-            ),
-          );
-        }
-      })
-      .catch(() => undefined);
+      });
+    }
+    setStyleKol(null);
   };
 
   const toggleKol = (handle: string) => {
@@ -536,6 +512,16 @@ export function OmniBox() {
 
       const data = await res.json();
       if (!res.ok) { toast(data.error ?? "Generation failed.", "error"); return; }
+
+      const used = prompt.trim();
+      const toSave = pendingStyles.current.filter((item) => used.includes(item.imageUrl));
+      pendingStyles.current = pendingStyles.current.filter((item) => !used.includes(item.imageUrl));
+      for (const item of toSave) {
+        void apiFetch("/api/styles/select", {
+          method: "POST",
+          body: JSON.stringify(item),
+        }).catch(() => undefined);
+      }
 
       toast("Generating… this takes ~60s. Check My Creations.", "success");
       if (editorRef.current) editorRef.current.replaceChildren();
