@@ -13,6 +13,7 @@ export function AdminUpload() {
   const { toast } = useToast();
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
+  const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState<{ id: string; name: string; avatar: string }[]>([]);
@@ -51,6 +52,10 @@ export function AdminUpload() {
       toast("Add a video.", "error");
       return;
     }
+    if (!title.trim()) {
+      toast("Name the video.", "error");
+      return;
+    }
     if (prompt.trim().length < 8) {
       toast("Write the remix prompt.", "error");
       return;
@@ -59,12 +64,14 @@ export function AdminUpload() {
     try {
       const body = new FormData();
       body.set("file", file);
+      body.set("title", title.trim());
       body.set("prompt", prompt.trim());
       const res = await apiFetch("/api/admin/discover", { method: "POST", body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Upload failed.");
       toast("Added to Discover.", "success");
       setFile(null);
+      setTitle("");
       setPrompt("");
       router.push("/discover");
     } catch (error) {
@@ -90,6 +97,15 @@ export function AdminUpload() {
           accept="video/mp4,video/quicktime,video/*"
           className="sr-only"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+        />
+      </label>
+      <label className="mt-4 block text-sm font-medium text-white">
+        Video name
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value.slice(0, 80))}
+          placeholder="Name shown on the card"
+          className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm font-normal text-white outline-none focus:border-yellow/50"
         />
       </label>
       <label className="mt-4 block text-sm font-medium text-white">

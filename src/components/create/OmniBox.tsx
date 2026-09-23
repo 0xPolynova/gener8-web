@@ -425,6 +425,15 @@ export function OmniBox() {
         editor.focus();
       }
     };
+    const pending = sessionStorage.getItem("gener8:pending-remix");
+    if (pending) {
+      sessionStorage.removeItem("gener8:pending-remix");
+      try {
+        handler(new CustomEvent("omni:remix", { detail: JSON.parse(pending) }));
+      } catch {
+        /* ignore a bad stored remix */
+      }
+    }
     window.addEventListener("omni:remix", handler);
     return () => window.removeEventListener("omni:remix", handler);
   }, []);

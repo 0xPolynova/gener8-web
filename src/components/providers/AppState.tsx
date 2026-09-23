@@ -104,8 +104,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (gen !== refreshGen.current) return;
       setSession(nextSession);
       setUser(nextUser);
-      setEligibility(tokenJson.eligibility ?? FALLBACK_ELIGIBILITY);
-      setTokenMint(typeof tokenJson.mint === "string" && tokenJson.mint ? tokenJson.mint : null);
+      if (tokenJson.eligibility) setEligibility(tokenJson.eligibility);
+      else if (tokenRes.ok) setEligibility(FALLBACK_ELIGIBILITY);
+      if (typeof tokenJson.mint === "string" && tokenJson.mint) setTokenMint(tokenJson.mint);
     } catch {
       if (gen !== refreshGen.current) return;
       setEligibility(FALLBACK_ELIGIBILITY);

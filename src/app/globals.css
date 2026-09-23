@@ -249,6 +249,19 @@ h4 { font-size: 1.0625rem; font-weight: 600; }
   animation: scale-in 0.5s ease-out both;
 }
 
+@keyframes feed-loop {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-feed-loop {
+  animation: feed-loop 70s linear infinite;
+}
+
 .yellow-glow {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--yellow) 40%, transparent),
     0 0 24px color-mix(in srgb, var(--yellow) 18%, transparent);

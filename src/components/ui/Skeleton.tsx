@@ -15,20 +15,24 @@ export function VideoCardSkeleton({
   tall = false,
   portrait = false,
   showMeta = true,
+  className,
 }: {
   tall?: boolean;
   portrait?: boolean;
   showMeta?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
+    <div className={cn("overflow-hidden rounded-[12px] border border-line bg-surface", className)}>
       <Skeleton
         className={
-          portrait
-            ? "aspect-[9/16]"
-            : tall
-              ? "aspect-[9/14]"
-              : "aspect-video"
+          className
+            ? "h-full w-full"
+            : portrait
+              ? "aspect-[9/16]"
+              : tall
+                ? "aspect-[9/14]"
+                : "aspect-video"
         }
       />
       {showMeta && (

@@ -1,56 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { VideoCard } from "./VideoCard";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { BentoGrid } from "./BentoGrid";
 import { VideoCardSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAppState } from "@/components/providers/AppState";
 import { promptPreview } from "@/lib/format";
 import { BrandMark } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
-import type { DiscoverFilter, GridSpan, VideoWithCreator } from "@/types";
+import type { DiscoverFilter, VideoWithCreator } from "@/types";
 import { apiFetch } from "@/lib/api";
-import { aspectWeight, packColumns, useColumnCount } from "./masonry";
 import { HoldGate } from "@/components/token/HoldGate";
 import { isAdminWallet } from "@/lib/admin";
 
-const ORDER_KEY = "gener8_discover_order";
-
-function discoverSpan(span?: GridSpan): GridSpan {
-  if (span === "wide") return "normal";
-  return span ?? "normal";
-}
-
-function orderByIds<T extends { id: string }>(list: T[], ids: string[]): T[] {
-  const map = new Map(list.map((item) => [item.id, item]));
-  const used = new Set<string>();
-  const ordered: T[] = [];
-  for (const id of ids) {
-    const item = map.get(id);
-    if (item) {
-      ordered.push(item);
-      used.add(id);
-    }
-  }
-  for (const item of list) {
-    if (!used.has(item.id)) ordered.push(item);
-  }
-  return ordered;
-}
-
-function readSavedOrder(): string[] | null {
-  try {
-    const raw = localStorage.getItem(ORDER_KEY);
-    if (!raw) return null;
-    const ids = JSON.parse(raw) as unknown;
-    return Array.isArray(ids)
-      ? ids.filter((id): id is string => typeof id === "string")
-      : null;
-  } catch {
-    return null;
-  }
-}
+const PAGE_SIZE = 8;
 
 const FILTERS: { id: DiscoverFilter; label: string }[] = [
   { id: "trending", label: "Trending" },
@@ -71,7 +36,8 @@ export function DiscoverFeed() {
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
   const [filter, setFilter] = useState<DiscoverFilter>("trending");
-  const columns = useColumnCount();
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,10 +46,11 @@ export function DiscoverFeed() {
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
-        let list: VideoWithCreator[] = data.videos ?? [];
-        const saved = readSavedOrder();
-        if (saved?.length) list = orderByIds(list, saved);
+        const list: VideoWithCreator[] = [...(data.videos ?? [])].sort(
+          (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+        );
         setVideos(list);
+        setShown(PAGE_SIZE);
       })
       .catch(() => toast("Couldn’t load the feed. Try again.", "error"))
       .finally(() => {
@@ -93,6 +60,20 @@ export function DiscoverFeed() {
       cancelled = true;
     };
   }, [toast, filter]);
+
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || loading) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        setShown((count) => Math.min(videos.length, count + PAGE_SIZE));
+      },
+      { rootMargin: "600px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, videos.length, shown]);
 
   const onLike = async (id: string) => {
     if (!session) {
@@ -169,24 +150,24 @@ export function DiscoverFeed() {
             );
           })}
         </div>
-      <div className="flex items-start gap-3">
-        {(loading
-          ? packColumns(
-              Array.from({ length: 8 }, (_, i) => i),
-              columns,
-              (i) => (i % 3 === 1 ? 16 / 9 : 9 / 16),
-            )
-          : packColumns(videos, columns, (video) => aspectWeight(video.aspectRatio))
-        ).map((column, columnIndex) => (
-          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-3">
-            {loading
-              ? column.map((i) => (
-                  <VideoCardSkeleton key={i as number} tall={(i as number) % 3 === 1} showMeta={false} />
-                ))
-              : (column as VideoWithCreator[]).map((video) => (
+      {loading ? (
+        <BentoGrid
+          items={["9:16", "16:9", "9:16", "1:1", "9:16", "16:9", "3:4", "9:16"].map((aspectRatio, index) => ({
+            key: `sk-${index}`,
+            aspectRatio,
+          }))}
+          render={() => <VideoCardSkeleton showMeta={false} className="h-full" />}
+        />
+      ) : (
+        Array.from({ length: Math.ceil(Math.min(shown, videos.length) / PAGE_SIZE) }, (_, page) => {
+          const slice = videos.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+          return (
+            <div key={slice.map((video) => video.id).join("-")} className="mb-3">
+              <BentoGrid
+                items={slice.map((video) => ({ key: video.id, aspectRatio: video.aspectRatio }))}
+                render={(index) => (
                   <VideoCard
-                    key={video.id}
-                    video={{ ...video, gridSpan: discoverSpan(video.gridSpan) }}
+                    video={slice[index]}
                     onLike={onLike}
                     onShare={onShare}
                     onRemix={onRemix}
@@ -194,20 +175,49 @@ export function DiscoverFeed() {
                     muted={muted}
                     onToggleMute={() => setMuted((on) => !on)}
                     showMeta={false}
-                    priority={videos.indexOf(video) < 4}
+                    fill
+                    priority={page === 0 && index < 4}
                   />
-                ))}
-          </div>
-        ))}
-      </div>
-      {!loading && videos.length === 0 && (
-        <EmptyState
-          className="mt-6"
-          title="No creations found."
-          body="Nothing in the feed yet — write a prompt above to be the first."
-        />
+                )}
+              />
+            </div>
+          );
+        })
       )}
+      <div ref={sentinel} className="h-px" />
+      {!loading && shown >= videos.length && <FeedEnd />}
       <HoldGate open={gateOpen} onClose={() => setGateOpen(false)} mint={tokenMint} />
+    </div>
+  );
+}
+
+const END_SPARKS = [
+  { left: "4%", top: "-8px", delay: 0 },
+  { left: "28%", top: "-12px", delay: 0.4 },
+  { left: "52%", top: "-6px", delay: 0.8 },
+  { left: "74%", top: "-14px", delay: 0.2 },
+  { left: "92%", top: "-8px", delay: 1 },
+  { left: "18%", top: "110%", delay: 0.6 },
+  { left: "46%", top: "120%", delay: 0.15 },
+  { left: "70%", top: "108%", delay: 0.9 },
+];
+
+function FeedEnd() {
+  return (
+    <div className="flex min-h-[80vh] items-center justify-center px-6">
+      <p className="relative text-center text-[28px] font-bold leading-tight text-white md:text-[36px]">
+        Make viral content with <span className="text-yellow">$GENER8</span>.
+        {END_SPARKS.map((spark) => (
+          <motion.span
+            key={`${spark.left}-${spark.top}`}
+            aria-hidden
+            className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-yellow shadow-[0_0_8px_#fff176]"
+            style={{ left: spark.left, top: spark.top }}
+            animate={{ opacity: [0.15, 1, 0.15], scale: [0.5, 1.2, 0.5] }}
+            transition={{ duration: 2.2, repeat: Infinity, delay: spark.delay, ease: "easeInOut" }}
+          />
+        ))}
+      </p>
     </div>
   );
 }
