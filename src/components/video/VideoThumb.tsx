@@ -37,7 +37,9 @@ export function VideoThumb({
   const rootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playGen = useRef(0);
+  const playingRef = useRef(playing);
   const mutedRef = useRef(muted);
+  playingRef.current = playing;
   mutedRef.current = muted;
 
   const [inView, setInView] = useState(priority);
@@ -94,6 +96,7 @@ export function VideoThumb({
         if (level.height && level.height <= target + 80) best = index;
       });
       if (best >= 0) hls.currentLevel = best;
+      if (playingRef.current) beginPlayback(el, playGen.current, !mutedRef.current);
     });
     hls.loadSource(playable);
     hls.attachMedia(el);
@@ -114,24 +117,32 @@ export function VideoThumb({
       setPlaybackReady(false);
       return;
     }
-    el.muted = mutedRef.current;
     setWarmed(true);
-    if (el.currentTime > 0.08) el.currentTime = 0;
-    const started = el.play();
-    void started
+    beginPlayback(el, gen, !mutedRef.current);
+  }, [playing, muted, mountVideo]);
+
+  function beginPlayback(el: HTMLVideoElement, gen: number, wantSound: boolean) {
+    el.muted = !wantSound;
+    void el.play()
       ?.then(() => {
-        if (gen !== playGen.current || el.paused || el.readyState < 3) return;
-        setPlaybackReady(true);
+        if (gen !== playGen.current) return;
+        if (wantSound) el.muted = false;
+        if (!el.paused) setPlaybackReady(true);
       })
       .catch((error: unknown) => {
         if (gen !== playGen.current) return;
         if (error instanceof DOMException && error.name === "AbortError") return;
+        if (!wantSound) return;
         el.muted = true;
-        void el.play()?.then(() => {
-          if (gen === playGen.current && !el.paused && el.readyState >= 3) setPlaybackReady(true);
-        }).catch(() => undefined);
+        void el.play()
+          ?.then(() => {
+            if (gen !== playGen.current) return;
+            el.muted = false;
+            if (!el.paused) setPlaybackReady(true);
+          })
+          .catch(() => undefined);
       });
-  }, [playing, mountVideo]);
+  }
 
   const rememberStill = (el: HTMLVideoElement) => {
     setFrameReady(true);

@@ -114,19 +114,26 @@ export function DiscoverFeed() {
     let streakStart = 0;
     let last = 0;
     let timer = 0;
-    const onMove = () => {
+    const releaseLater = () => {
       const now = Date.now();
-      if (!last || now - last > 500) streakStart = now;
+      if (!streakStart || now - last > 500) streakStart = now;
       last = now;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setSpotlight(null), Math.max(0, 2500 - (now - streakStart)));
     };
-    window.addEventListener("mousemove", onMove);
+    const onClick = (event: MouseEvent) => {
+      const card = document.querySelector(`[data-video="${spotlight}"]`);
+      if (card && event.target instanceof Node && card.contains(event.target)) return;
+      releaseLater();
+    };
+    window.addEventListener("mousemove", releaseLater);
+    window.addEventListener("pointerdown", onClick);
     return () => {
-      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mousemove", releaseLater);
+      window.removeEventListener("pointerdown", onClick);
       window.clearTimeout(timer);
     };
-  }, [spotlight]);
+  }, [spotlight, spotlightArmed]);
 
   const feedEnded = !loading && shown >= videos.length;
   useEffect(() => {
