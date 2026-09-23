@@ -86,11 +86,15 @@ export function VideoCard({
       onMouseLeave={() => setHover(false)}
     >
       <Link
-        href={`/video/${video.id}`}
+        href={showMeta ? `/video/${video.id}` : "#"}
         aria-label={video.title || promptPreview(video.prompt, 80)}
+        onClick={(event) => {
+          if (!showMeta) event.preventDefault();
+        }}
         className={cn(
           "relative block w-full overflow-hidden bg-ink",
           fill ? "h-full" : showMeta ? mediaAspect : aspectClass[video.aspectRatio] ?? "aspect-video",
+          !showMeta && "cursor-default",
         )}
       >
         <div className="absolute inset-0">

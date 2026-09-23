@@ -25,6 +25,7 @@ export function DiscoverFeed() {
   const [muted, setMuted] = useState(false);
   const [shown, setShown] = useState(PAGE_SIZE);
   const [spotlight, setSpotlight] = useState<string | null>(null);
+  const [spotlightArmed, setSpotlightArmed] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const spotlightStarted = useRef<string | null>(null);
@@ -72,28 +73,44 @@ export function DiscoverFeed() {
     const index = videos.findIndex((video) => video.id === shared);
     if (index < 0) return;
     spotlightStarted.current = shared;
+    spotlightScrolled.current = null;
+    setSpotlightArmed(false);
     setShown((count) => Math.max(count, index + 1));
     setSpotlight(shared);
   }, [loading, videos]);
 
   useEffect(() => {
     if (!spotlight || spotlightScrolled.current === spotlight) return;
-    const el = document.querySelector(`[data-video="${spotlight}"]`);
-    if (!el) return;
-    spotlightScrolled.current = spotlight;
-    const rect = el.getBoundingClientRect();
-    const target = Math.max(0, window.scrollY + rect.top - window.innerHeight / 2 + rect.height / 2);
-    const controls = animate(window.scrollY, target, {
-      type: "spring",
-      stiffness: 70,
-      damping: 22,
-      onUpdate: (value) => window.scrollTo(0, value),
-    });
-    return () => controls.stop();
-  }, [spotlight, shown]);
+    let frame = 0;
+    let controls: { stop: () => void } | null = null;
+    const start = () => {
+      const el = document.querySelector(`[data-video="${spotlight}"]`);
+      if (!el) {
+        frame = window.requestAnimationFrame(start);
+        return;
+      }
+      spotlightScrolled.current = spotlight;
+      const rect = el.getBoundingClientRect();
+      const target = Math.max(
+        0,
+        window.scrollY + rect.top - window.innerHeight / 2 + rect.height / 2,
+      );
+      controls = animate(window.scrollY, target, {
+        duration: 0.85,
+        ease: [0.22, 1, 0.36, 1],
+        onUpdate: (value) => window.scrollTo(0, value),
+        onComplete: () => setSpotlightArmed(true),
+      });
+    };
+    start();
+    return () => {
+      window.cancelAnimationFrame(frame);
+      controls?.stop();
+    };
+  }, [spotlight]);
 
   useEffect(() => {
-    if (!spotlight) return;
+    if (!spotlight || !spotlightArmed) return;
     let streakStart = 0;
     let last = 0;
     let timer = 0;
