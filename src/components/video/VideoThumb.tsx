@@ -109,6 +109,12 @@ export function VideoThumb({
     if (!el || !mountVideo) return;
     el.muted = mutedRef.current;
     if (playing) {
+      document.querySelectorAll("video").forEach((node) => {
+        if (node !== el) {
+          node.pause();
+          node.muted = true;
+        }
+      });
       setWarmed(true);
       if (el.currentTime > 0.08) el.currentTime = 0;
       void el

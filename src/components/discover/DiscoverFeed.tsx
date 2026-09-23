@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { forwardRef, useEffect, useRef, useState } from "react";
+import { animate, motion } from "framer-motion";
+import { chatHide } from "@/components/layout/chatMotion";
 import { VideoCard } from "./VideoCard";
 import { BentoGrid } from "./BentoGrid";
 import { VideoCardSkeleton } from "@/components/ui/Skeleton";
@@ -34,12 +35,14 @@ export function DiscoverFeed() {
   const [gateOpen, setGateOpen] = useState(false);
   const [videos, setVideos] = useState<VideoWithCreator[]>([]);
   const [loading, setLoading] = useState(true);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [filter, setFilter] = useState<DiscoverFilter>("trending");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [spotlight, setSpotlight] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
   const spotlightStarted = useRef<string | null>(null);
+  const spotlightScrolled = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,13 +91,19 @@ export function DiscoverFeed() {
   }, [loading, videos]);
 
   useEffect(() => {
-    if (!spotlight) return;
-    const frame = window.requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-video="${spotlight}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!spotlight || spotlightScrolled.current === spotlight) return;
+    const el = document.querySelector(`[data-video="${spotlight}"]`);
+    if (!el) return;
+    spotlightScrolled.current = spotlight;
+    const rect = el.getBoundingClientRect();
+    const target = Math.max(0, window.scrollY + rect.top - window.innerHeight / 2 + rect.height / 2);
+    const controls = animate(window.scrollY, target, {
+      type: "spring",
+      stiffness: 70,
+      damping: 22,
+      onUpdate: (value) => window.scrollTo(0, value),
     });
-    return () => window.cancelAnimationFrame(frame);
+    return () => controls.stop();
   }, [spotlight, shown]);
 
   useEffect(() => {
@@ -115,6 +124,35 @@ export function DiscoverFeed() {
       window.clearTimeout(timer);
     };
   }, [spotlight]);
+
+  const feedEnded = !loading && shown >= videos.length;
+  useEffect(() => {
+    if (!feedEnded) {
+      chatHide.set(0);
+      return;
+    }
+    const update = () => {
+      const node = endRef.current;
+      if (!node) {
+        chatHide.set(0);
+        return;
+      }
+      const rect = node.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      const middle = window.innerHeight / 2;
+      const start = window.innerHeight;
+      const progress = (start - center) / (start - middle);
+      chatHide.set(Math.min(1, Math.max(0, progress)));
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      chatHide.set(0);
+    };
+  }, [feedEnded]);
 
   const onLike = async (id: string) => {
     if (!session) {
@@ -224,11 +262,12 @@ export function DiscoverFeed() {
                   onShare={onShare}
                   onRemix={onRemix}
                   remixLabel={walletAddress ? "Remix" : "Connect wallet"}
-                  muted={muted && !active}
+                  muted={active ? false : muted}
+                  suspendHover={Boolean(spotlight) && !active}
                   onToggleMute={() => setMuted((on) => !on)}
                   showMeta={false}
                   fill
-                  spotlight={active}
+                        spotlight={active}
                   onEnded={() => setSpotlight(null)}
                   priority={index < 4}
                 />
@@ -238,7 +277,7 @@ export function DiscoverFeed() {
         />
       )}
       <div ref={sentinel} className="h-px" />
-      {!loading && shown >= videos.length && <FeedEnd />}
+      {!loading && shown >= videos.length && <FeedEnd ref={endRef} />}
       <HoldGate open={gateOpen} onClose={() => setGateOpen(false)} mint={tokenMint} />
     </div>
   );
@@ -255,9 +294,9 @@ const END_SPARKS = [
   { left: "70%", top: "108%", delay: 0.9 },
 ];
 
-function FeedEnd() {
+const FeedEnd = forwardRef<HTMLDivElement>(function FeedEnd(_, ref) {
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-6">
+    <div ref={ref} className="flex min-h-[80vh] items-center justify-center px-6">
       <p className="relative text-center text-[28px] font-bold leading-tight text-white md:text-[36px]">
         Make viral content with <span className="text-yellow">$GENER8</span>.
         {END_SPARKS.map((spark) => (
@@ -273,4 +312,4 @@ function FeedEnd() {
       </p>
     </div>
   );
-}
+});
