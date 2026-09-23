@@ -1004,6 +1004,7 @@ export function OmniBox() {
     </motion.div>
 
     <KolPicker
+      anchorRef={containerRef}
       open={showKols}
       selected={selectedKols}
       onToggle={toggleKol}

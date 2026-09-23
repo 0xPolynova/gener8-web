@@ -52,6 +52,7 @@ interface KolPickerProps {
   onToggle: (handle: string) => void;
   onStyle: (kol: Kol, mode: "new" | "community") => void;
   onClose: () => void;
+  anchorRef?: React.RefObject<HTMLElement | null>;
 }
 
 function StyleButton({ onPick }: { onPick: (mode: "new" | "community") => void }) {
@@ -130,7 +131,7 @@ function StyleButton({ onPick }: { onPick: (mode: "new" | "community") => void }
   );
 }
 
-export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPickerProps) {
+export function KolPicker({ open, selected, onToggle, onStyle, onClose, anchorRef }: KolPickerProps) {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const newKolRef = useRef<HTMLButtonElement>(null);
@@ -139,6 +140,28 @@ export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPic
   const [draft, setDraft] = useState<{ file: File; preview: string } | null>(null);
   const [name, setName] = useState("");
   const [sending, setSending] = useState(false);
+  const [bottom, setBottom] = useState(200);
+
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const el = anchorRef?.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setBottom(Math.max(16, window.innerHeight - rect.top + 10));
+    };
+    place();
+    const observed = anchorRef?.current;
+    const observer = new ResizeObserver(place);
+    if (observed) observer.observe(observed);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, anchorRef]);
 
   useEffect(() => {
     if (!open) {
@@ -205,7 +228,8 @@ export function KolPicker({ open, selected, onToggle, onStyle, onClose }: KolPic
           <motion.div
             key="kol-panel"
             id="kol-picker-panel"
-            className="fixed inset-x-0 bottom-[15.5rem] md:bottom-[12.5rem] z-[21] mx-auto w-[calc(100%-2rem)] max-w-3xl px-0"
+            className="fixed inset-x-0 z-[21] mx-auto w-[calc(100%-0.5rem)] max-w-3xl px-0"
+            style={{ bottom }}
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
