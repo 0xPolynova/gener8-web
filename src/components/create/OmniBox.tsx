@@ -621,9 +621,24 @@ export function OmniBox() {
 
     setSubmitting(true);
     try {
-      const omniAssets = media
-        .filter((m) => m.uploadedUrl)
-        .map((m) => ({ type: m.type, url: m.uploadedUrl!, name: m.label }));
+      const mentions: { type: "image" | "video"; url: string; name: string; at: number }[] = [];
+      for (const handle of selectedKolsRef.current) {
+        const kol = findKol(handle);
+        const name = `@${handle}`;
+        const at = trimmed.indexOf(name);
+        if (kol?.avatar && at >= 0) mentions.push({ type: "image", url: kol.avatar, name, at });
+      }
+      for (const item of mediaRef.current) {
+        if (!item.uploadedUrl) continue;
+        const chip = `@${item.label}`;
+        const urlAt = trimmed.indexOf(item.uploadedUrl);
+        const chipAt = trimmed.indexOf(chip);
+        const at = urlAt >= 0 ? urlAt : chipAt;
+        const name = urlAt >= 0 ? item.uploadedUrl : chip;
+        if (at >= 0) mentions.push({ type: item.type, url: item.uploadedUrl, name, at });
+      }
+      mentions.sort((a, b) => a.at - b.at);
+      const omniAssets = mentions.map(({ type, url, name }) => ({ type, url, name }));
 
       const res = await apiFetch("/api/generate", {
         method: "POST",
