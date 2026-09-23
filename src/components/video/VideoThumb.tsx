@@ -51,6 +51,7 @@ export function VideoThumb({
     readCachedStill(videoUrl),
   );
   const [stillFailed, setStillFailed] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
 
   const playable = mediaUrl(videoUrl);
   const hlsSource = isHlsUrl(playable);
@@ -107,11 +108,6 @@ export function VideoThumb({
 
   useEffect(() => {
     const el = videoRef.current;
-    if (el) el.muted = muted;
-  }, [muted, mountVideo]);
-
-  useEffect(() => {
-    const el = videoRef.current;
     if (!el || !mountVideo) return;
     const gen = ++playGen.current;
     if (!playing) {
@@ -124,27 +120,28 @@ export function VideoThumb({
     const start = () => {
       if (gen !== playGen.current) return;
       const wantSound = !mutedRef.current;
-      el.muted = !wantSound;
+      el.muted = true;
       void el
         .play()
         ?.then(() => {
           if (gen !== playGen.current) return;
-          if (wantSound) el.muted = false;
           setPlaybackReady(true);
+          if (!wantSound) {
+            setSoundOn(false);
+            return;
+          }
+          el.muted = false;
+          if (el.paused) {
+            el.muted = true;
+            setSoundOn(false);
+            void el.play()?.catch(() => undefined);
+            return;
+          }
+          setSoundOn(true);
         })
         .catch((error: unknown) => {
           if (gen !== playGen.current) return;
           if (error instanceof DOMException && error.name === "AbortError") return;
-          if (!wantSound) return;
-          el.muted = true;
-          void el
-            .play()
-            ?.then(() => {
-              if (gen !== playGen.current) return;
-              el.muted = false;
-              setPlaybackReady(true);
-            })
-            .catch(() => undefined);
         });
     };
     retryPlay.current = start;
@@ -187,7 +184,7 @@ export function VideoThumb({
           ref={videoRef}
           src={hlsSource ? undefined : playable ?? undefined}
           poster={still ?? undefined}
-          muted={muted}
+          muted={!soundOn}
           loop={loop}
           playsInline
           onEnded={onEnded}
