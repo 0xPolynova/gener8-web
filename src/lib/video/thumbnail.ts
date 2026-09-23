@@ -23,20 +23,9 @@ export function sharpStill(input: string | null) {
   }
 }
 
-/** Play the full MP4 so hover does not start on a low adaptive rendition. */
-export function sharpPlayback(videoUrl: string | null) {
-  const playable = mediaUrl(videoUrl);
-  if (!playable) return null;
-  try {
-    const url = new URL(playable);
-    if (!isStreamHost(url.hostname)) return playable;
-    if (url.pathname.includes("/downloads/")) return playable;
-    const uid = streamUid(url);
-    if (!uid) return playable;
-    return `${url.origin}/${uid}/downloads/default.mp4`;
-  } catch {
-    return playable;
-  }
+export function isHlsUrl(input: string | null) {
+  if (!input) return false;
+  return input.includes(".m3u8") || input.includes("/manifest/video");
 }
 
 /** Prefer a stored still; for Cloudflare Stream, derive a large one from the playback URL. */

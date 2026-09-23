@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Hls from "hls.js";
 import { VideoPoster } from "@/components/video/VideoPoster";
 import {
   captureVideoStill,
+  isHlsUrl,
   readCachedStill,
-  sharpPlayback,
   stillFromVideo,
 } from "@/lib/video/thumbnail";
 import { mediaUrl } from "@/lib/api";
@@ -45,10 +46,9 @@ export function VideoThumb({
   const [capturedStill, setCapturedStill] = useState<string | null>(() =>
     readCachedStill(videoUrl),
   );
-  const [playbackSrc, setPlaybackSrc] = useState<string | null>(null);
 
   const playable = mediaUrl(videoUrl);
-  const hdSrc = sharpPlayback(videoUrl) ?? playable;
+  const hlsSource = isHlsUrl(playable);
   const still = stillFromVideo(videoUrl, thumbnailUrl) ?? capturedStill;
   const mountVideo =
     Boolean(playable) && (playing || warmed || (inView && !still));
@@ -73,6 +73,31 @@ export function VideoThumb({
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !mountVideo || !playable || !hlsSource) return;
+    if (el.canPlayType("application/vnd.apple.mpegurl")) {
+      el.src = playable;
+      return;
+    }
+    if (!Hls.isSupported()) return;
+    const hls = new Hls({
+      capLevelToPlayerSize: true,
+      abrEwmaDefaultEstimate: 8_000_000,
+    });
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      const target = (el.clientHeight || 720) * (window.devicePixelRatio || 1);
+      let best = hls.levels.length - 1;
+      hls.levels.forEach((level, index) => {
+        if (level.height && level.height <= target + 80) best = index;
+      });
+      if (best >= 0) hls.currentLevel = best;
+    });
+    hls.loadSource(playable);
+    hls.attachMedia(el);
+    return () => hls.destroy();
+  }, [hlsSource, mountVideo, playable]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -135,16 +160,13 @@ export function VideoThumb({
       {mountVideo && (
         <video
           ref={videoRef}
-          src={playbackSrc ?? hdSrc ?? undefined}
+          src={hlsSource ? undefined : playable ?? undefined}
           poster={still ?? undefined}
           muted={muted}
           loop={loop}
           playsInline
           onEnded={onEnded}
           preload={playing ? "auto" : "metadata"}
-          onError={() => {
-            if (playable && playbackSrc !== playable) setPlaybackSrc(playable);
-          }}
           onLoadedData={(e) => {
             if (!playing) rememberStill(e.currentTarget);
           }}
