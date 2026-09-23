@@ -19,7 +19,7 @@ const TOOLS = [
   ["Publish", "Public on the feed, or keep it private."],
 ];
 
-const PILLARS = [
+const PILLARS: [string, string, string[], string, string][] = [
   ["Discover", "See what is already working.", ["Trending and viral", "15s and 30s", "Hover to play"], "Browse", "/discover"],
   ["Create", "Every format. One box.", ["Words and stills", "A KOL look", "A remix of the cut"], "Start", "/discover"],
   ["Publish", "Put it on the feed.", ["Public when it is ready", "Private while you cut", "Remix stays linked"], "Your clips", "/creations"],
