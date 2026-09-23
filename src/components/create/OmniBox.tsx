@@ -469,8 +469,12 @@ export function OmniBox() {
   const removeMedia = (id: string) => {
     const item = mediaRef.current.find((m) => m.id === id);
     if (item) {
-      URL.revokeObjectURL(item.localUrl);
-      if (editorRef.current) removeChip(editorRef.current, `@${item.label}`);
+      if (item.localUrl.startsWith("blob:")) URL.revokeObjectURL(item.localUrl);
+      if (editorRef.current) {
+        removeChip(editorRef.current, `@${item.label}`);
+        if (item.uploadedUrl) removeChip(editorRef.current, item.uploadedUrl);
+      }
+      pendingStyles.current = pendingStyles.current.filter((style) => style.imageUrl !== item.uploadedUrl && style.imageUrl !== item.localUrl);
     }
     setMedia((prev) => prev.filter((m) => m.id !== id));
     if (editorRef.current) setPrompt(serializeEditor(editorRef.current));
@@ -762,20 +766,19 @@ export function OmniBox() {
             {/* Selected KOL chips — avatar + handle */}
             {selectedKols.map((handle) => {
               const kol = KOLS.find((k) => k.handle === handle);
+              if (!kol) return null;
               return (
-                <span
-                  key={handle}
-                  className="inline-flex items-center gap-1 rounded-full border border-yellow/30 bg-yellow/10 pl-0.5 pr-2 py-0.5 text-[11px] font-medium text-yellow flex-shrink-0"
-                >
-                  {kol && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={kol.avatar} alt={kol.name} className="h-5 w-5 rounded-full object-cover border border-yellow/20 flex-shrink-0" />
-                  )}
-                  @{handle}
-                  <button onClick={() => toggleKol(handle)} className="opacity-60 hover:opacity-100 ml-0.5">
-                    <X className="h-2.5 w-2.5" />
+                <div key={handle} className="group/thumb relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={kol.avatar} alt={kol.name} className="h-full w-full object-cover" />
+                  <button
+                    onClick={() => toggleKol(handle)}
+                    className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                    aria-label={`Remove ${kol.name}`}
+                  >
+                    <X className="h-3 w-3 text-white" />
                   </button>
-                </span>
+                </div>
               );
             })}
             {/* Media thumbnails */}
