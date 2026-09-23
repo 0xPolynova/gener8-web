@@ -125,8 +125,8 @@ export function DiscoverFeed() {
       }
       const rect = node.getBoundingClientRect();
       const center = rect.top + rect.height / 2;
-      const middle = window.innerHeight / 2;
-      const start = window.innerHeight;
+      const middle = window.innerHeight * 0.5;
+      const start = window.innerHeight * 0.92;
       const progress = (start - center) / (start - middle);
       chatHide.set(Math.min(1, Math.max(0, progress)));
     };
@@ -261,8 +261,8 @@ const END_SPARKS = [
 
 const FeedEnd = forwardRef<HTMLDivElement>(function FeedEnd(_, ref) {
   return (
-    <div ref={ref} className="flex min-h-[80vh] items-center justify-center px-6">
-      <p className="relative text-center text-[28px] font-bold leading-tight text-white md:text-[36px]">
+    <div className="flex min-h-[80vh] items-center justify-center px-6">
+      <p ref={ref} className="relative text-center text-[28px] font-bold leading-tight text-white md:text-[36px]">
         Make viral content with <span className="text-yellow">$GENER8</span>.
         {END_SPARKS.map((spark) => (
           <motion.span

@@ -2,7 +2,8 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useTransform } from "framer-motion";
+import { chatHide } from "@/components/layout/chatMotion";
 import { X, Plus, Sparkles, Settings2, Users } from "lucide-react";
 import { apiFetch, mediaUrl } from "@/lib/api";
 import { useAppState } from "@/components/providers/AppState";
@@ -292,6 +293,7 @@ export function OmniBox() {
   const [submitting, setSubmitting] = useState(false);
 
   const remaining = eligibility?.remainingToday ?? eligibility?.dailyLimit ?? 0;
+  const chatY = useTransform(chatHide, [0, 1], [0, 520]);
   selectedKolsRef.current = selectedKols;
   mediaRef.current = media;
 
@@ -697,9 +699,10 @@ export function OmniBox() {
 
   return (
     <>
-    <div
+    <motion.div
       ref={containerRef}
-      className="fixed bottom-[calc(56px+0.35rem)] md:bottom-2 left-1/2 z-30 w-[calc(100%-0.5rem)] max-w-3xl -translate-x-1/2"
+      style={{ x: "-50%", y: chatY }}
+      className="fixed bottom-[calc(56px+0.35rem)] md:bottom-2 left-1/2 z-30 w-[calc(100%-0.5rem)] max-w-3xl"
     >
       {mentionQuery !== null && (
         <div
@@ -998,7 +1001,7 @@ export function OmniBox() {
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
 
     <KolPicker
       open={showKols}

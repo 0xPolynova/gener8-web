@@ -1,12 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
 import { OmniBox } from "@/components/create/OmniBox";
 import { useAppState } from "@/components/providers/AppState";
-import { chatHide } from "./chatMotion";
 
 function hideChat(pathname: string) {
   return (
@@ -27,7 +26,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === "/") return <>{children}</>;
   const chat = !hideChat(pathname) && Boolean(walletAddress);
   const fullBleed = pathname === "/discover" || pathname === "/creations";
-  const chatY = useTransform(chatHide, [0, 1], ["0%", "120%"]);
 
   return (
     <div className="flex min-h-full flex-col bg-ink">
@@ -43,14 +41,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {chat && (
           <motion.div
             key="chat"
-            initial={{ y: 96, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 96, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 340, damping: 32 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
           >
-            <motion.div style={{ y: chatY }}>
-              <OmniBox />
-            </motion.div>
+            <OmniBox />
           </motion.div>
         )}
       </AnimatePresence>

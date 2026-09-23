@@ -36,6 +36,7 @@ export function VideoThumb({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playGen = useRef(0);
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
@@ -107,31 +108,29 @@ export function VideoThumb({
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !mountVideo) return;
-    el.muted = mutedRef.current;
-    if (playing) {
-      document.querySelectorAll("video").forEach((node) => {
-        if (node !== el) {
-          node.pause();
-          node.muted = true;
-        }
-      });
-      setWarmed(true);
-      if (el.currentTime > 0.08) el.currentTime = 0;
-      void el
-        .play()
-        .then(() => {
-          if (!el.paused && el.readyState >= 3) setPlaybackReady(true);
-        })
-        .catch(() => {
-          el.muted = true;
-          void el.play().then(() => {
-            if (!el.paused && el.readyState >= 3) setPlaybackReady(true);
-          });
-        });
+    const gen = ++playGen.current;
+    if (!playing) {
+      el.pause();
+      setPlaybackReady(false);
       return;
     }
-    el.pause();
-    setPlaybackReady(false);
+    el.muted = mutedRef.current;
+    setWarmed(true);
+    if (el.currentTime > 0.08) el.currentTime = 0;
+    const started = el.play();
+    void started
+      ?.then(() => {
+        if (gen !== playGen.current || el.paused || el.readyState < 3) return;
+        setPlaybackReady(true);
+      })
+      .catch((error: unknown) => {
+        if (gen !== playGen.current) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        el.muted = true;
+        void el.play()?.then(() => {
+          if (gen === playGen.current && !el.paused && el.readyState >= 3) setPlaybackReady(true);
+        }).catch(() => undefined);
+      });
   }, [playing, mountVideo]);
 
   const rememberStill = (el: HTMLVideoElement) => {
