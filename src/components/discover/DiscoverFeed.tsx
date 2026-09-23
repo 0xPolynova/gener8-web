@@ -13,6 +13,7 @@ import type { DiscoverFilter, GridSpan, VideoWithCreator } from "@/types";
 import { apiFetch } from "@/lib/api";
 import { aspectWeight, packColumns, useColumnCount } from "./masonry";
 import { HoldGate } from "@/components/token/HoldGate";
+import { isAdminWallet } from "@/lib/admin";
 
 const ORDER_KEY = "gener8_discover_order";
 
@@ -123,8 +124,9 @@ export function DiscoverFeed() {
       return;
     }
     const holds =
-      Boolean(session) &&
-      (eligibility?.state === "eligible" || eligibility?.state === "limit_reached");
+      isAdminWallet(walletAddress) ||
+      (Boolean(session) &&
+        (eligibility?.state === "eligible" || eligibility?.state === "limit_reached"));
     if (!holds) {
       setGateOpen(true);
       return;

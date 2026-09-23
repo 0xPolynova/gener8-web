@@ -16,6 +16,7 @@ const STAGE_COPY: Record<GenerationStatus, string> = {
   processing: "Processing motion and color…",
   complete: "Complete",
   failed: "Generation failed",
+  archived: "Archived",
 };
 
 export function PreviewStage({
