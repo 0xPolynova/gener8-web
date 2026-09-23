@@ -39,6 +39,7 @@ export function VideoThumb({
   const playGen = useRef(0);
   const playingRef = useRef(playing);
   const mutedRef = useRef(muted);
+  const retryPlay = useRef<(() => void) | null>(null);
   playingRef.current = playing;
   mutedRef.current = muted;
 
@@ -97,7 +98,7 @@ export function VideoThumb({
         if (level.height && level.height <= target + 80) best = index;
       });
       if (best >= 0) hls.currentLevel = best;
-      if (playingRef.current) beginPlayback(el, playGen.current, !mutedRef.current);
+      if (playingRef.current) retryPlay.current?.();
     });
     hls.loadSource(playable);
     hls.attachMedia(el);
@@ -114,36 +115,42 @@ export function VideoThumb({
     if (!el || !mountVideo) return;
     const gen = ++playGen.current;
     if (!playing) {
+      retryPlay.current = null;
       el.pause();
       setPlaybackReady(false);
       return;
     }
     setWarmed(true);
-    beginPlayback(el, gen, !mutedRef.current);
-  }, [playing, muted, mountVideo]);
-
-  function beginPlayback(el: HTMLVideoElement, gen: number, wantSound: boolean) {
-    el.muted = !wantSound;
-    void el.play()
-      ?.then(() => {
-        if (gen !== playGen.current) return;
-        if (wantSound) el.muted = false;
-        if (!el.paused) setPlaybackReady(true);
-      })
-      .catch((error: unknown) => {
-        if (gen !== playGen.current) return;
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        if (!wantSound) return;
-        el.muted = true;
-        void el.play()
-          ?.then(() => {
-            if (gen !== playGen.current) return;
-            el.muted = false;
-            if (!el.paused) setPlaybackReady(true);
-          })
-          .catch(() => undefined);
-      });
-  }
+    const start = () => {
+      if (gen !== playGen.current) return;
+      const wantSound = !mutedRef.current;
+      el.muted = !wantSound;
+      void el
+        .play()
+        ?.then(() => {
+          if (gen !== playGen.current) return;
+          if (wantSound) el.muted = false;
+          setPlaybackReady(true);
+        })
+        .catch((error: unknown) => {
+          if (gen !== playGen.current) return;
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          if (!wantSound) return;
+          el.muted = true;
+          void el
+            .play()
+            ?.then(() => {
+              if (gen !== playGen.current) return;
+              el.muted = false;
+              setPlaybackReady(true);
+            })
+            .catch(() => undefined);
+        });
+    };
+    retryPlay.current = start;
+    if (hlsSource && el.readyState === 0) return;
+    start();
+  }, [playing, muted, mountVideo, hlsSource]);
 
   const rememberStill = (el: HTMLVideoElement) => {
     setFrameReady(true);
@@ -191,10 +198,12 @@ export function VideoThumb({
           onCanPlay={(e) => {
             if (playing && e.currentTarget.readyState >= 3) setPlaybackReady(true);
           }}
-          onPlaying={(e) => {
-            if (e.currentTarget.readyState >= 3) setPlaybackReady(true);
+          onPlaying={() => {
+            if (playingRef.current) setPlaybackReady(true);
           }}
-          onPause={() => setPlaybackReady(false)}
+          onPause={() => {
+            if (!playingRef.current) setPlaybackReady(false);
+          }}
           className={cn(
             "absolute inset-0 h-full w-full object-cover",
             live || (!still && frameReady) ? "opacity-100" : "opacity-0",
