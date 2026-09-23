@@ -5,6 +5,7 @@ import { VideoPoster } from "@/components/video/VideoPoster";
 import {
   captureVideoStill,
   readCachedStill,
+  sharpPlayback,
   stillFromVideo,
 } from "@/lib/video/thumbnail";
 import { mediaUrl } from "@/lib/api";
@@ -18,6 +19,8 @@ export function VideoThumb({
   playing = false,
   muted = true,
   priority = false,
+  loop = true,
+  onEnded,
   className,
 }: {
   videoUrl: string | null;
@@ -26,6 +29,8 @@ export function VideoThumb({
   playing?: boolean;
   muted?: boolean;
   priority?: boolean;
+  loop?: boolean;
+  onEnded?: () => void;
   className?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -40,8 +45,10 @@ export function VideoThumb({
   const [capturedStill, setCapturedStill] = useState<string | null>(() =>
     readCachedStill(videoUrl),
   );
+  const [playbackSrc, setPlaybackSrc] = useState<string | null>(null);
 
   const playable = mediaUrl(videoUrl);
+  const hdSrc = sharpPlayback(videoUrl) ?? playable;
   const still = stillFromVideo(videoUrl, thumbnailUrl) ?? capturedStill;
   const mountVideo =
     Boolean(playable) && (playing || warmed || (inView && !still));
@@ -82,9 +89,14 @@ export function VideoThumb({
       void el
         .play()
         .then(() => {
-          if (!el.paused) setPlaybackReady(true);
+          if (!el.paused && el.readyState >= 3) setPlaybackReady(true);
         })
-        .catch(() => undefined);
+        .catch(() => {
+          el.muted = true;
+          void el.play().then(() => {
+            if (!el.paused && el.readyState >= 3) setPlaybackReady(true);
+          });
+        });
       return;
     }
     el.pause();
@@ -123,20 +135,28 @@ export function VideoThumb({
       {mountVideo && (
         <video
           ref={videoRef}
-          src={playable ?? undefined}
+          src={playbackSrc ?? hdSrc ?? undefined}
           poster={still ?? undefined}
           muted={muted}
-          loop
+          loop={loop}
           playsInline
+          onEnded={onEnded}
           preload={playing ? "auto" : "metadata"}
+          onError={() => {
+            if (playable && playbackSrc !== playable) setPlaybackSrc(playable);
+          }}
           onLoadedData={(e) => {
             if (!playing) rememberStill(e.currentTarget);
           }}
-          onPlaying={() => setPlaybackReady(true)}
+          onCanPlay={(e) => {
+            if (playing && e.currentTarget.readyState >= 3) setPlaybackReady(true);
+          }}
+          onPlaying={(e) => {
+            if (e.currentTarget.readyState >= 3) setPlaybackReady(true);
+          }}
           onPause={() => setPlaybackReady(false)}
           className={cn(
-            "absolute inset-0 h-full w-full object-cover transition-transform duration-500",
-            playing ? "scale-[1.03]" : "scale-100",
+            "absolute inset-0 h-full w-full object-cover",
             live || (!still && frameReady) ? "opacity-100" : "opacity-0",
           )}
         />
