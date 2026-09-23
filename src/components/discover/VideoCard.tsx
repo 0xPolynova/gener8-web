@@ -2,10 +2,10 @@
 
 import { Heart, Share2, Maximize2, Volume2, VolumeX, Shuffle, Wallet, Download, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { GeneratingPoster } from "@/components/creations/GeneratingPoster";
-import { VideoThumb } from "@/components/video/VideoThumb";
+import { VideoThumb, type VideoThumbHandle } from "@/components/video/VideoThumb";
 import { apiUrl, mediaUrl } from "@/lib/api";
 import { formatCount, formatRelativeTime, promptPreview } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -65,6 +65,7 @@ export function VideoCard({
   onEnded?: () => void;
 }) {
   const [hover, setHover] = useState(false);
+  const thumbRef = useRef<VideoThumbHandle>(null);
   const span = video.gridSpan ?? "normal";
   const mediaAspect =
     span === "hero"
@@ -82,7 +83,11 @@ export function VideoCard({
         showMeta ? cn("h-full", spanClass[span]) : fill ? "h-full" : "",
         className,
       )}
-      onMouseEnter={() => setHover(true)}
+      onMouseEnter={() => {
+        if (suspendHover) return;
+        setHover(true);
+        thumbRef.current?.play();
+      }}
       onMouseLeave={() => setHover(false)}
     >
       <Link
@@ -102,6 +107,7 @@ export function VideoCard({
             <GeneratingPoster />
           ) : (
             <VideoThumb
+              ref={thumbRef}
               videoUrl={video.videoUrl}
               thumbnailUrl={video.thumbnailUrl}
               poster={video.poster}
@@ -136,6 +142,8 @@ export function VideoCard({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                const clip = e.currentTarget.closest("article")?.querySelector("video");
+                if (clip) clip.muted = !muted;
                 onToggleMute();
               }}
             >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Hls from "hls.js";
 import { VideoPoster } from "@/components/video/VideoPoster";
 import {
@@ -13,17 +13,9 @@ import { mediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { PosterPalette } from "@/types";
 
-export function VideoThumb({
-  videoUrl,
-  thumbnailUrl,
-  poster,
-  playing = false,
-  muted = true,
-  priority = false,
-  loop = true,
-  onEnded,
-  className,
-}: {
+export type VideoThumbHandle = { play: () => void };
+
+export const VideoThumb = forwardRef<VideoThumbHandle, {
   videoUrl: string | null;
   thumbnailUrl: string | null;
   poster: PosterPalette;
@@ -33,7 +25,17 @@ export function VideoThumb({
   loop?: boolean;
   onEnded?: () => void;
   className?: string;
-}) {
+}>(function VideoThumb({
+  videoUrl,
+  thumbnailUrl,
+  poster,
+  playing = false,
+  muted = true,
+  priority = false,
+  loop = true,
+  onEnded,
+  className,
+}, ref) {
   const rootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playGen = useRef(0);
@@ -52,7 +54,16 @@ export function VideoThumb({
     readCachedStill(videoUrl),
   );
   const [stillFailed, setStillFailed] = useState(false);
-  const [soundOn, setSoundOn] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    play() {
+      const el = videoRef.current;
+      if (!el) return;
+      gestureAt.current = performance.now();
+      el.muted = mutedRef.current;
+      void el.play()?.then(() => setPlaybackReady(true)).catch(() => undefined);
+    },
+  }));
 
   const playable = mediaUrl(videoUrl);
   const hlsSource = isHlsUrl(playable);
@@ -109,7 +120,10 @@ export function VideoThumb({
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !mountVideo) return;
-    if (playing && Date.now() - gestureAt.current < 500) return;
+    if (playing && performance.now() - gestureAt.current < 800) {
+      el.muted = muted;
+      return;
+    }
     const gen = ++playGen.current;
     if (!playing) {
       retryPlay.current = null;
@@ -118,34 +132,21 @@ export function VideoThumb({
       return;
     }
     setWarmed(true);
-    if (Date.now() - gestureAt.current < 500) return;
     const start = () => {
       if (gen !== playGen.current) return;
-      if (!el.paused && el.muted === mutedRef.current) {
+      el.muted = mutedRef.current;
+      if (!el.paused) {
         setPlaybackReady(true);
-        setSoundOn(!el.muted);
         return;
       }
-      const wantSound = !mutedRef.current;
-      el.muted = !wantSound;
-      void el
-        .play()
-        ?.then(() => {
-          if (gen !== playGen.current) return;
-          setSoundOn(wantSound && !el.muted);
-          setPlaybackReady(true);
-        })
-        .catch((error: unknown) => {
-          if (gen !== playGen.current) return;
-          if (error instanceof DOMException && error.name === "AbortError") return;
-          if (!wantSound) return;
-          el.muted = true;
-          void el.play()?.then(() => {
-            if (gen !== playGen.current) return;
-            setSoundOn(false);
-            setPlaybackReady(true);
-          }).catch(() => undefined);
-        });
+      void el.play()?.then(() => {
+        if (gen !== playGen.current) return;
+        el.muted = mutedRef.current;
+        setPlaybackReady(true);
+      }).catch((error: unknown) => {
+        if (gen !== playGen.current) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      });
     };
     retryPlay.current = start;
     if (!el.paused) return;
@@ -164,20 +165,6 @@ export function VideoThumb({
     <div
       ref={rootRef}
       className={cn("absolute inset-0 bg-ink", className)}
-      onMouseEnter={() => {
-        const el = videoRef.current;
-        if (!el || mutedRef.current) return;
-        gestureAt.current = Date.now();
-        el.muted = false;
-        setSoundOn(true);
-        void el.play()?.then(() => {
-          setPlaybackReady(true);
-        }).catch(() => {
-          setSoundOn(false);
-          el.muted = true;
-          void el.play()?.then(() => setPlaybackReady(true)).catch(() => undefined);
-        });
-      }}
     >
       <VideoPoster
         palette={poster}
@@ -205,7 +192,7 @@ export function VideoThumb({
           ref={videoRef}
           src={hlsSource ? undefined : playable ?? undefined}
           poster={still ?? undefined}
-          muted={!soundOn}
+          muted={muted}
           loop={loop}
           playsInline
           onEnded={onEnded}
@@ -230,4 +217,4 @@ export function VideoThumb({
       )}
     </div>
   );
-}
+});

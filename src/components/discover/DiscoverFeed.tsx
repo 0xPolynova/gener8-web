@@ -251,7 +251,7 @@ export function DiscoverFeed() {
                   onShare={onShare}
                   onRemix={onRemix}
                   remixLabel={walletAddress ? "Remix" : "Connect wallet"}
-                  muted={active ? false : muted}
+                  muted={muted}
                   suspendHover={Boolean(spotlight) && !active}
                   onToggleMute={() => setMuted((on) => !on)}
                   showMeta={false}
