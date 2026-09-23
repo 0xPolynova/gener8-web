@@ -9,25 +9,12 @@ import { VideoCardSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAppState } from "@/components/providers/AppState";
 import { promptPreview } from "@/lib/format";
-import { BrandMark } from "@/components/brand/Logo";
-import { cn } from "@/lib/utils";
-import type { DiscoverFilter, VideoWithCreator } from "@/types";
+import type { VideoWithCreator } from "@/types";
 import { apiFetch } from "@/lib/api";
 import { HoldGate } from "@/components/token/HoldGate";
 import { isAdminWallet } from "@/lib/admin";
 
 const PAGE_SIZE = 8;
-
-const FILTERS: { id: DiscoverFilter; label: string }[] = [
-  { id: "trending", label: "Trending" },
-  { id: "viral", label: "viral" },
-  { id: "tokens", label: "tokens" },
-  { id: "memecoins", label: "memecoins" },
-  { id: "pnl", label: "P&L" },
-  { id: "music", label: "music" },
-  { id: "15s", label: "15s" },
-  { id: "30s", label: "30s" },
-];
 
 export function DiscoverFeed() {
   const { toast } = useToast();
@@ -36,7 +23,6 @@ export function DiscoverFeed() {
   const [videos, setVideos] = useState<VideoWithCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(false);
-  const [filter, setFilter] = useState<DiscoverFilter>("trending");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [spotlight, setSpotlight] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -47,7 +33,7 @@ export function DiscoverFeed() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    apiFetch(`/api/videos?filter=${filter}`)
+    apiFetch("/api/videos?filter=trending")
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -64,7 +50,7 @@ export function DiscoverFeed() {
     return () => {
       cancelled = true;
     };
-  }, [toast, filter]);
+  }, [toast]);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -208,27 +194,6 @@ export function DiscoverFeed() {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-3">
-          {FILTERS.map((item) => {
-            const active = item.id === filter;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setFilter(item.id)}
-                className={cn(
-                  "inline-flex items-center gap-2.5 rounded-xl border px-4 py-3 transition-colors",
-                  active
-                    ? "border-white/40 bg-white/10"
-                    : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/8",
-                )}
-              >
-                <BrandMark size={26} />
-                <span className="text-[18px] font-bold text-white">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
       {loading ? (
         <BentoGrid
           items={["9:16", "16:9", "9:16", "1:1", "9:16", "16:9", "3:4", "9:16"].map((aspectRatio, index) => ({

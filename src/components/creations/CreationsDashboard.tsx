@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
@@ -32,7 +33,7 @@ export function CreationsDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<CreationsTab>("all");
   const [videos, setVideos] = useState<VideoWithCreator[]>([]);
-  const [fetching, setFetching] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [pendingArchive, setPendingArchive] = useState<VideoWithCreator | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
 
@@ -71,8 +72,8 @@ export function CreationsDashboard() {
     };
   }, [session, tab, toast]);
 
-  if (loading) {
-    return <p className="text-sm text-muted">Loading…</p>;
+  if (loading || (session && fetching)) {
+    return <CreationsLoader />;
   }
 
   if (!session) {
@@ -99,8 +100,12 @@ export function CreationsDashboard() {
   };
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-3">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
+    >
+      <div className="flex flex-wrap justify-center gap-3">
         {TABS.map((item) => {
           const active = item.id === tab;
           return (
@@ -121,7 +126,6 @@ export function CreationsDashboard() {
           );
         })}
       </div>
-      {fetching && <p className="mt-6 text-sm text-muted">Loading…</p>}
       {!fetching && videos.length === 0 && (
         <EmptyState
           className="mt-6"
@@ -236,6 +240,20 @@ export function CreationsDashboard() {
           </Button>
         </div>
       </Modal>
+    </motion.div>
+  );
+}
+
+function CreationsLoader() {
+  return (
+    <div className="flex min-h-[70vh] flex-col items-center justify-center">
+      <motion.div
+        animate={{ opacity: [0.4, 1, 0.4], scale: [0.96, 1.04, 0.96] }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <BrandMark size={84} />
+      </motion.div>
+      <p className="mt-4 text-sm font-semibold tracking-wide text-white/70">Loading</p>
     </div>
   );
 }
